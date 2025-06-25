@@ -1,0 +1,538 @@
+name: Bot Commands
+
+on:
+  issue_comment:
+    types: [created, edited]
+  pull_request_review:
+    types: [submitted, edited]
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: write
+  statuses: write
+
+jobs:
+  # Handle bot commands in issue comments
+  handle-issue-commands:
+    name: Handle Issue Commands
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issue_comment' && github.event.issue.pull_request == null
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Process issue commands
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = context.payload.comment.body.toLowerCase().trim();
+            const issue = context.payload.issue;
+            const commenter = context.payload.comment.user.login;
+            
+            // Check if commenter is a code owner
+            const codeOwners = ['Arpit529Srivastava', 'Shrey327'];
+            const isCodeOwner = codeOwners.includes(commenter);
+            
+            if (!isCodeOwner) {
+              console.log(`Commenter ${commenter} is not a code owner, ignoring commands`);
+              return;
+            }
+            
+            try {
+              // Handle /reopen command
+              if (comment === '/reopen') {
+                if (issue.state === 'closed') {
+                  await github.rest.issues.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    state: 'open'
+                  });
+                  
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `✅ Issue reopened by @${commenter}`
+                  });
+                  
+                  console.log(`Issue ${issue.number} reopened by ${commenter}`);
+                } else {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `ℹ️ Issue is already open`
+                  });
+                }
+              }
+              
+              // Handle /close command
+              else if (comment === '/close') {
+                if (issue.state === 'open') {
+                  await github.rest.issues.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    state: 'closed'
+                  });
+                  
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `🔒 Issue closed by @${commenter}`
+                  });
+                  
+                  console.log(`Issue ${issue.number} closed by ${commenter}`);
+                } else {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `ℹ️ Issue is already closed`
+                  });
+                }
+              }
+              
+              // Handle /assign command
+              else if (comment.startsWith('/assign')) {
+                const assignee = comment.split(' ')[1];
+                if (assignee && codeOwners.includes(assignee)) {
+                  await github.rest.issues.addAssignees({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    assignees: [assignee]
+                  });
+                  
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `👤 Issue assigned to @${assignee} by @${commenter}`
+                  });
+                  
+                  console.log(`Issue ${issue.number} assigned to ${assignee} by ${commenter}`);
+                } else {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `❌ Invalid assignee. Available code owners: ${codeOwners.join(', ')}`
+                  });
+                }
+              }
+              
+              // Handle /label command
+              else if (comment.startsWith('/label')) {
+                const labels = comment.split(' ').slice(1);
+                if (labels.length > 0) {
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    labels: labels
+                  });
+                  
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `🏷️ Labels added by @${commenter}: ${labels.join(', ')}`
+                  });
+                  
+                  console.log(`Labels ${labels.join(', ')} added to issue ${issue.number} by ${commenter}`);
+                }
+              }
+              
+              // Handle /help command
+              else if (comment === '/help') {
+                const helpText = `🤖 **Available Bot Commands:**
+                
+                **Issue Management:**
+                - \`/reopen\` - Reopen a closed issue
+                - \`/close\` - Close an open issue
+                - \`/assign <username>\` - Assign issue to a code owner
+                - \`/label <label1> <label2>\` - Add labels to issue
+                
+                **PR Management:**
+                - \`/merge\` - Merge the PR (requires LGTM)
+                - \`/lgtm\` - Approve the PR
+                - \`/reopen\` - Reopen a closed PR
+                - \`/close\` - Close an open PR
+                - \`/request-review <username>\` - Request review from code owner
+                
+                **Available Code Owners:** ${codeOwners.join(', ')}`;
+                
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: helpText
+                });
+              }
+              
+            } catch (error) {
+              console.log('Error processing issue command:', error.message);
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `❌ Error processing command: ${error.message}`
+              });
+            }
+
+  # Handle bot commands in PR comments
+  handle-pr-commands:
+    name: Handle PR Commands
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issue_comment' && github.event.issue.pull_request != null
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Process PR commands
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = context.payload.comment.body.toLowerCase().trim();
+            const issue = context.payload.issue;
+            const commenter = context.payload.comment.user.login;
+            
+            // Check if commenter is a code owner
+            const codeOwners = ['Arpit529Srivastava', 'Shrey327'];
+            const isCodeOwner = codeOwners.includes(commenter);
+            
+            if (!isCodeOwner) {
+              console.log(`Commenter ${commenter} is not a code owner, ignoring commands`);
+              return;
+            }
+            
+            try {
+              // Handle /reopen command
+              if (comment === '/reopen') {
+                if (issue.state === 'closed') {
+                  await github.rest.pulls.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: issue.number,
+                    state: 'open'
+                  });
+                  
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `✅ PR reopened by @${commenter}`
+                  });
+                  
+                  console.log(`PR ${issue.number} reopened by ${commenter}`);
+                } else {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `ℹ️ PR is already open`
+                  });
+                }
+              }
+              
+              // Handle /close command
+              else if (comment === '/close') {
+                if (issue.state === 'open') {
+                  await github.rest.pulls.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: issue.number,
+                    state: 'closed'
+                  });
+                  
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `🔒 PR closed by @${commenter}`
+                  });
+                  
+                  console.log(`PR ${issue.number} closed by ${commenter}`);
+                } else {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `ℹ️ PR is already closed`
+                  });
+                }
+              }
+              
+              // Handle /lgtm command
+              else if (comment === '/lgtm') {
+                // Add LGTM label
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: ['lgtm']
+                });
+                
+                // Approve the PR
+                await github.rest.pulls.createReview({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: issue.number,
+                  event: 'APPROVE',
+                  body: `✅ LGTM by @${commenter}`
+                });
+                
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: `✅ LGTM by @${commenter} - PR approved and ready for merge`
+                });
+                
+                console.log(`PR ${issue.number} approved by ${commenter}`);
+              }
+              
+              // Handle /merge command
+              else if (comment === '/merge') {
+                // Check if PR has LGTM label
+                const labels = issue.labels.map(label => label.name);
+                if (labels.includes('lgtm')) {
+                  // Check if PR is mergeable
+                  const pr = await github.rest.pulls.get({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: issue.number
+                  });
+                  
+                  if (pr.data.mergeable) {
+                    // Merge the PR
+                    await github.rest.pulls.merge({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      pull_number: issue.number,
+                      merge_method: 'squash',
+                      commit_title: `Merge PR #${issue.number} by @${commenter}`,
+                      commit_message: `Closes #${issue.number}\n\nMerged by @${commenter}`
+                    });
+                    
+                    await github.rest.issues.createComment({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: issue.number,
+                      body: `🚀 PR merged by @${commenter}`
+                    });
+                    
+                    console.log(`PR ${issue.number} merged by ${commenter}`);
+                  } else {
+                    await github.rest.issues.createComment({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: issue.number,
+                      body: `❌ Cannot merge: PR has conflicts or is not up to date`
+                    });
+                  }
+                } else {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `❌ Cannot merge: PR needs LGTM approval first`
+                  });
+                }
+              }
+              
+              // Handle /request-review command
+              else if (comment.startsWith('/request-review')) {
+                const reviewer = comment.split(' ')[1];
+                if (reviewer && codeOwners.includes(reviewer)) {
+                  await github.rest.pulls.requestReviewers({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: issue.number,
+                    reviewers: [reviewer]
+                  });
+                  
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `👀 Review requested from @${reviewer} by @${commenter}`
+                  });
+                  
+                  console.log(`Review requested from ${reviewer} for PR ${issue.number} by ${commenter}`);
+                } else {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `❌ Invalid reviewer. Available code owners: ${codeOwners.join(', ')}`
+                  });
+                }
+              }
+              
+              // Handle /assign command
+              else if (comment.startsWith('/assign')) {
+                const assignee = comment.split(' ')[1];
+                if (assignee && codeOwners.includes(assignee)) {
+                  await github.rest.issues.addAssignees({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    assignees: [assignee]
+                  });
+                  
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `👤 PR assigned to @${assignee} by @${commenter}`
+                  });
+                  
+                  console.log(`PR ${issue.number} assigned to ${assignee} by ${commenter}`);
+                } else {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `❌ Invalid assignee. Available code owners: ${codeOwners.join(', ')}`
+                  });
+                }
+              }
+              
+              // Handle /label command
+              else if (comment.startsWith('/label')) {
+                const labels = comment.split(' ').slice(1);
+                if (labels.length > 0) {
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    labels: labels
+                  });
+                  
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `🏷️ Labels added by @${commenter}: ${labels.join(', ')}`
+                  });
+                  
+                  console.log(`Labels ${labels.join(', ')} added to PR ${issue.number} by ${commenter}`);
+                }
+              }
+              
+              // Handle /help command
+              else if (comment === '/help') {
+                const helpText = `🤖 **Available Bot Commands:**
+                
+                **Issue Management:**
+                - \`/reopen\` - Reopen a closed issue
+                - \`/close\` - Close an open issue
+                - \`/assign <username>\` - Assign issue to a code owner
+                - \`/label <label1> <label2>\` - Add labels to issue
+                
+                **PR Management:**
+                - \`/merge\` - Merge the PR (requires LGTM)
+                - \`/lgtm\` - Approve the PR
+                - \`/reopen\` - Reopen a closed PR
+                - \`/close\` - Close an open PR
+                - \`/request-review <username>\` - Request review from code owner
+                
+                **Available Code Owners:** ${codeOwners.join(', ')}`;
+                
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: helpText
+                });
+              }
+              
+            } catch (error) {
+              console.log('Error processing PR command:', error.message);
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `❌ Error processing command: ${error.message}`
+              });
+            }
+
+  # Handle PR review events
+  handle-pr-reviews:
+    name: Handle PR Reviews
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request_review'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Process PR review
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const review = context.payload.review;
+            const pr = context.payload.pull_request;
+            const reviewer = review.user.login;
+            
+            // Check if reviewer is a code owner
+            const codeOwners = ['Arpit529Srivastava', 'Shrey327'];
+            const isCodeOwner = codeOwners.includes(reviewer);
+            
+            if (!isCodeOwner) {
+              console.log(`Reviewer ${reviewer} is not a code owner, ignoring review`);
+              return;
+            }
+            
+            try {
+              // Handle approved reviews
+              if (review.state === 'approved') {
+                // Add LGTM label
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  labels: ['lgtm']
+                });
+                
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  body: `✅ PR approved by @${reviewer} - Ready for merge!`
+                });
+                
+                console.log(`PR ${pr.number} approved by ${reviewer}`);
+              }
+              
+              // Handle changes requested reviews
+              else if (review.state === 'changes_requested') {
+                // Remove LGTM label if it exists
+                try {
+                  await github.rest.issues.removeLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: pr.number,
+                    name: 'lgtm'
+                  });
+                } catch (error) {
+                  // Label might not exist, ignore error
+                }
+                
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  body: `⚠️ Changes requested by @${reviewer} - Please address the feedback`
+                });
+                
+                console.log(`Changes requested for PR ${pr.number} by ${reviewer}`);
+              }
+              
+            } catch (error) {
+              console.log('Error processing PR review:', error.message);
+            } 

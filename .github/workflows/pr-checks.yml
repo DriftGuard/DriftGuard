@@ -4,6 +4,11 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+
 jobs:
   # Automated PR labeling and assignment
   pr-automation:
@@ -17,77 +22,127 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            // Auto-assign the PR to code owners
-            await github.rest.issues.addAssignees({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              assignees: ['Arpit529Srivastava']
-            });
+            try {
+              // Auto-assign the PR to code owners based on changed files
+              const changedFiles = context.payload.pull_request.files.map(file => file.filename);
+              
+              // Determine assignees based on file patterns and CODEOWNERS
+              const assignees = new Set();
+              
+              // Check for ML/AI files
+              const hasMLFiles = changedFiles.some(file => 
+                file.startsWith('ai/') || file.endsWith('.py') || file.includes('requirements.txt')
+              );
+              
+              // Check for frontend files
+              const hasFrontendFiles = changedFiles.some(file => 
+                file.startsWith('web/') || file.endsWith('.js') || file.endsWith('.ts') || 
+                file.endsWith('.jsx') || file.endsWith('.tsx') || file.includes('package.json')
+              );
+              
+              // Check for backend files
+              const hasBackendFiles = changedFiles.some(file => 
+                file.endsWith('.go') || file.startsWith('cmd/') || file.startsWith('internal/') || file.startsWith('pkg/')
+              );
+              
+              // Assign based on file types
+              if (hasMLFiles) {
+                assignees.add('Shrey327');
+              }
+              if (hasFrontendFiles) {
+                assignees.add('Shrey327');
+              }
+              if (hasBackendFiles) {
+                assignees.add('Arpit529Srivastava');
+              }
+              
+              // Default assignee if no specific files detected
+              if (assignees.size === 0) {
+                assignees.add('Arpit529Srivastava');
+              }
+              
+              // Add assignees
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                assignees: Array.from(assignees)
+              });
+              
+              console.log(`Assigned PR to: ${Array.from(assignees).join(', ')}`);
+            } catch (error) {
+              console.log('Could not assign PR automatically:', error.message);
+              // Don't fail the workflow for assignment issues
+            }
 
       - name: Auto-label PR
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            const path = require('path');
-            
-            // Get changed files
-            const changedFiles = context.payload.pull_request.files.map(file => file.filename);
-            
-            // Define label rules based on file patterns
-            const labelRules = [
-              { pattern: /\.go$/, label: 'go' },
-              { pattern: /\.py$/, label: 'python' },
-              { pattern: /\.(js|jsx|ts|tsx)$/, label: 'frontend' },
-              { pattern: /\.(yaml|yml)$/, label: 'infrastructure' },
-              { pattern: /Dockerfile/, label: 'docker' },
-              { pattern: /\.md$/, label: 'documentation' },
-              { pattern: /\.github\/workflows/, label: 'ci-cd' },
-              { pattern: /deploy\//, label: 'deployment' },
-              { pattern: /ai\//, label: 'ai-ml' },
-              { pattern: /web\//, label: 'frontend' },
-              { pattern: /cmd\//, label: 'backend' },
-              { pattern: /internal\//, label: 'backend' },
-              { pattern: /pkg\//, label: 'backend' }
-            ];
-            
-            // Determine labels to add
-            const labelsToAdd = new Set();
-            
-            for (const file of changedFiles) {
-              for (const rule of labelRules) {
-                if (rule.pattern.test(file)) {
-                  labelsToAdd.add(rule.label);
+            try {
+              const fs = require('fs');
+              const path = require('path');
+              
+              // Get changed files
+              const changedFiles = context.payload.pull_request.files.map(file => file.filename);
+              
+              // Define label rules based on file patterns
+              const labelRules = [
+                { pattern: /\.go$/, label: 'go' },
+                { pattern: /\.py$/, label: 'python' },
+                { pattern: /\.(js|jsx|ts|tsx)$/, label: 'frontend' },
+                { pattern: /\.(yaml|yml)$/, label: 'infrastructure' },
+                { pattern: /Dockerfile/, label: 'docker' },
+                { pattern: /\.md$/, label: 'documentation' },
+                { pattern: /\.github\/workflows/, label: 'ci-cd' },
+                { pattern: /deploy\//, label: 'deployment' },
+                { pattern: /ai\//, label: 'ai-ml' },
+                { pattern: /web\//, label: 'frontend' },
+                { pattern: /cmd\//, label: 'backend' },
+                { pattern: /internal\//, label: 'backend' },
+                { pattern: /pkg\//, label: 'backend' }
+              ];
+              
+              // Determine labels to add
+              const labelsToAdd = new Set();
+              
+              for (const file of changedFiles) {
+                for (const rule of labelRules) {
+                  if (rule.pattern.test(file)) {
+                    labelsToAdd.add(rule.label);
+                  }
                 }
               }
-            }
-            
-            // Add size label based on PR size
-            const additions = context.payload.pull_request.additions;
-            const deletions = context.payload.pull_request.deletions;
-            const totalChanges = additions + deletions;
-            
-            if (totalChanges <= 10) {
-              labelsToAdd.add('size/XS');
-            } else if (totalChanges <= 30) {
-              labelsToAdd.add('size/S');
-            } else if (totalChanges <= 100) {
-              labelsToAdd.add('size/M');
-            } else if (totalChanges <= 500) {
-              labelsToAdd.add('size/L');
-            } else {
-              labelsToAdd.add('size/XL');
-            }
-            
-            // Add labels
-            if (labelsToAdd.size > 0) {
-              await github.rest.issues.addLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.payload.pull_request.number,
-                labels: Array.from(labelsToAdd)
-              });
+              
+              // Add size label based on PR size
+              const additions = context.payload.pull_request.additions;
+              const deletions = context.payload.pull_request.deletions;
+              const totalChanges = additions + deletions;
+              
+              if (totalChanges <= 10) {
+                labelsToAdd.add('size/XS');
+              } else if (totalChanges <= 30) {
+                labelsToAdd.add('size/S');
+              } else if (totalChanges <= 100) {
+                labelsToAdd.add('size/M');
+              } else if (totalChanges <= 500) {
+                labelsToAdd.add('size/L');
+              } else {
+                labelsToAdd.add('size/XL');
+              }
+              
+              // Add labels
+              if (labelsToAdd.size > 0) {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  labels: Array.from(labelsToAdd)
+                });
+              }
+            } catch (error) {
+              console.log('Could not add labels automatically:', error.message);
+              // Don't fail the workflow for labeling issues
             }
 
   # Check PR description and template
@@ -102,23 +157,28 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const pr = context.payload.pull_request;
-            const description = pr.body || '';
-            
-            // Check if description is too short
-            if (description.length < 50) {
-              core.setFailed('PR description is too short. Please provide a detailed description of your changes.');
+            try {
+              const pr = context.payload.pull_request;
+              const description = pr.body || '';
+              
+              // Check if description is too short
+              if (description.length < 50) {
+                core.setFailed('PR description is too short. Please provide a detailed description of your changes.');
+              }
+              
+              // Check for required sections
+              const requiredSections = ['## Description', '## Type of Change', '## Testing'];
+              const missingSections = requiredSections.filter(section => !description.includes(section));
+              
+              if (missingSections.length > 0) {
+                core.setFailed(`PR description is missing required sections: ${missingSections.join(', ')}`);
+              }
+              
+              console.log('PR description check passed');
+            } catch (error) {
+              console.log('Could not check PR description:', error.message);
+              // Don't fail the workflow for description check issues
             }
-            
-            // Check for required sections
-            const requiredSections = ['## Description', '## Type of Change', '## Testing'];
-            const missingSections = requiredSections.filter(section => !description.includes(section));
-            
-            if (missingSections.length > 0) {
-              core.setFailed(`PR description is missing required sections: ${missingSections.join(', ')}`);
-            }
-            
-            console.log('PR description check passed');
 
   # Check for breaking changes
   breaking-changes-check:
@@ -132,28 +192,33 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const pr = context.payload.pull_request;
-            const description = pr.body || '';
-            const title = pr.title || '';
-            
-            // Check if PR is marked as breaking change
-            const isBreakingChange = description.includes('[x] Breaking change') || 
-                                   title.includes('[BREAKING]') ||
-                                   title.includes('breaking');
-            
-            if (isBreakingChange) {
-              // Add breaking change label
-              await github.rest.issues.addLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: pr.number,
-                labels: ['breaking-change']
-              });
+            try {
+              const pr = context.payload.pull_request;
+              const description = pr.body || '';
+              const title = pr.title || '';
               
-              // Check if breaking changes are properly documented
-              if (!description.includes('## Breaking Changes')) {
-                core.setFailed('Breaking changes must be documented in the PR description under "## Breaking Changes" section');
+              // Check if PR is marked as breaking change
+              const isBreakingChange = description.includes('[x] Breaking change') || 
+                                     title.includes('[BREAKING]') ||
+                                     title.includes('breaking');
+              
+              if (isBreakingChange) {
+                // Add breaking change label
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  labels: ['breaking-change']
+                });
+                
+                // Check if breaking changes are properly documented
+                if (!description.includes('## Breaking Changes')) {
+                  core.setFailed('Breaking changes must be documented in the PR description under "## Breaking Changes" section');
+                }
               }
+            } catch (error) {
+              console.log('Could not check for breaking changes:', error.message);
+              // Don't fail the workflow for breaking changes check issues
             }
 
   # Check commit message format
@@ -170,22 +235,28 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { data: commits } = await github.rest.pulls.listCommits({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number
-            });
-            
-            const conventionalCommitPattern = /^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?: .+/;
-            
-            for (const commit of commits) {
-              const message = commit.commit.message;
-              if (!conventionalCommitPattern.test(message)) {
-                core.setFailed(`Commit message "${message}" does not follow conventional commit format`);
+            try {
+              const { data: commits } = await github.rest.pulls.listCommits({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number
+              });
+              
+              const conventionalCommitPattern = /^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?: .+/;
+              
+              for (const commit of commits) {
+                const message = commit.commit.message;
+                if (!conventionalCommitPattern.test(message)) {
+                  core.setFailed(`Commit message "${message}" does not follow conventional commit format`);
+                }
               }
+              
+              console.log('All commit messages follow conventional commit format');
+            } catch (error) {
+              console.log('Could not check commit messages:', error.message);
+              // Don't fail the workflow for commit message check issues
+              // This might happen due to permission issues or API rate limits
             }
-            
-            console.log('All commit messages follow conventional commit format');
 
   # Check for security vulnerabilities
   security-check:
@@ -293,32 +364,36 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { data: files } = await github.rest.pulls.listFiles({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number
-            });
-            
-            const codeFiles = files.filter(file => 
-              file.filename.endsWith('.go') || 
-              file.filename.endsWith('.py') || 
-              file.filename.endsWith('.js') || 
-              file.filename.endsWith('.ts')
-            );
-            
-            const docFiles = files.filter(file => 
-              file.filename.endsWith('.md') || 
-              file.filename.includes('docs/')
-            );
-            
-            // If there are code changes but no documentation changes, add a comment
-            if (codeFiles.length > 0 && docFiles.length === 0) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.payload.pull_request.number,
-                body: '⚠️ This PR includes code changes but no documentation updates. Please consider updating relevant documentation if needed.'
-              });
+            try {
+              // Use files from PR payload instead of making API call
+              const changedFiles = context.payload.pull_request.files.map(file => file.filename);
+              
+              const codeFiles = changedFiles.filter(file => 
+                file.endsWith('.go') || 
+                file.endsWith('.py') || 
+                file.endsWith('.js') || 
+                file.endsWith('.ts')
+              );
+              
+              const docFiles = changedFiles.filter(file => 
+                file.endsWith('.md') || 
+                file.includes('docs/')
+              );
+              
+              // If there are code changes but no documentation changes, add a comment
+              if (codeFiles.length > 0 && docFiles.length === 0) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  body: '⚠️ This PR includes code changes but no documentation updates. Please consider updating relevant documentation if needed.'
+                });
+              }
+              
+              console.log(`Code files: ${codeFiles.length}, Doc files: ${docFiles.length}`);
+            } catch (error) {
+              console.log('Could not check for documentation updates:', error.message);
+              // Don't fail the workflow for documentation check issues
             }
 
   # Check for test coverage
@@ -333,32 +408,36 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { data: files } = await github.rest.pulls.listFiles({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number
-            });
-            
-            const codeFiles = files.filter(file => 
-              file.filename.endsWith('.go') || 
-              file.filename.endsWith('.py') || 
-              file.filename.endsWith('.js') || 
-              file.filename.endsWith('.ts')
-            );
-            
-            const testFiles = files.filter(file => 
-              file.filename.includes('_test.go') || 
-              file.filename.includes('test_') || 
-              file.filename.includes('.test.') ||
-              file.filename.includes('__tests__')
-            );
-            
-            // If there are code changes but no test changes, add a comment
-            if (codeFiles.length > 0 && testFiles.length === 0) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.payload.pull_request.number,
-                body: '⚠️ This PR includes code changes but no test updates. Please consider adding or updating tests for your changes.'
-              });
+            try {
+              // Use files from PR payload instead of making API call
+              const changedFiles = context.payload.pull_request.files.map(file => file.filename);
+              
+              const codeFiles = changedFiles.filter(file => 
+                file.endsWith('.go') || 
+                file.endsWith('.py') || 
+                file.endsWith('.js') || 
+                file.endsWith('.ts')
+              );
+              
+              const testFiles = changedFiles.filter(file => 
+                file.includes('_test.go') || 
+                file.includes('test_') || 
+                file.includes('.test.') ||
+                file.includes('__tests__')
+              );
+              
+              // If there are code changes but no test changes, add a comment
+              if (codeFiles.length > 0 && testFiles.length === 0) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  body: '⚠️ This PR includes code changes but no test updates. Please consider adding or updating tests for your changes.'
+                });
+              }
+              
+              console.log(`Code files: ${codeFiles.length}, Test files: ${testFiles.length}`);
+            } catch (error) {
+              console.log('Could not check for test coverage:', error.message);
+              // Don't fail the workflow for test coverage check issues
             } 

@@ -4,6 +4,7 @@ rules:
       - base=main
       - label=documentation
       - label=size/XS
+      - label=lgtm
       - status-success=ci
       - status-success=pr-checks
     actions:
@@ -18,6 +19,7 @@ rules:
     conditions:
       - base=main
       - label=dependencies
+      - label=lgtm
       - status-success=ci
       - status-success=pr-checks
     actions:
@@ -33,6 +35,7 @@ rules:
       - base=main
       - label=size/XS
       - label=bug
+      - label=lgtm
       - status-success=ci
       - status-success=pr-checks
     actions:
@@ -48,6 +51,7 @@ rules:
       - base=main
       - label=ci-cd
       - label=size/XS
+      - label=lgtm
       - status-success=ci
       - status-success=pr-checks
     actions:
@@ -56,4 +60,34 @@ rules:
         update_branch: true
       merge:
         method: squash
-        commit_message: "ci: {{ title }}" 
+        commit_message: "ci: {{ title }}"
+
+  - name: Auto-merge frontend changes
+    conditions:
+      - base=main
+      - label=frontend
+      - label=lgtm
+      - status-success=ci
+      - status-success=pr-checks
+    actions:
+      queue:
+        method: rebase
+        update_branch: true
+      merge:
+        method: squash
+        commit_message: "feat: {{ title }}"
+
+  - name: Auto-merge ML/AI changes
+    conditions:
+      - base=main
+      - label=ai-ml
+      - label=lgtm
+      - status-success=ci
+      - status-success=pr-checks
+    actions:
+      queue:
+        method: rebase
+        update_branch: true
+      merge:
+        method: squash
+        commit_message: "feat: {{ title }}" 

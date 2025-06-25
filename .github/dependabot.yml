@@ -10,8 +10,10 @@ updates:
     open-pull-requests-limit: 10
     reviewers:
       - "Arpit529Srivastava"
+      - "Shrey327"
     assignees:
       - "Arpit529Srivastava"
+      - "Shrey327"
     labels:
       - "dependencies"
       - "go"
@@ -28,12 +30,15 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 10
     reviewers:
+      - "Shrey327"
       - "Arpit529Srivastava"
     assignees:
       - "Arpit529Srivastava"
+      - "Shrey327"
     labels:
       - "dependencies"
       - "python"
+      - "ai-ml"
     commit-message:
       prefix: "deps"
       include: "scope"
@@ -47,12 +52,15 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 10
     reviewers:
+      - "Shrey327"
       - "Arpit529Srivastava"
     assignees:
+      - "Shrey327"
       - "Arpit529Srivastava"
     labels:
       - "dependencies"
-      - "frontend"
+      - "frontend"  
+      - "web"
     commit-message:
       prefix: "deps"
       include: "scope"
