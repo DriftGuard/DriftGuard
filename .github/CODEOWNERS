@@ -1,5 +1,6 @@
 # Global code owners
-* @Arpit529Srivastava 
+* @Arpit529Srivastava
+* @Shrey327
 
 # Backend/Go code
 *.go @Arpit529Srivastava
@@ -8,18 +9,18 @@ internal/ @Arpit529Srivastava
 pkg/ @Arpit529Srivastava
 
 # AI/ML components
-ai/ @Arpit529Srivastava
-*.py @Arpit529Srivastava
-requirements.txt @Arpit529Srivastava
+ai/ @Shrey327
+*.py @Shrey327
+requirements.txt @Shrey327
 
 # Frontend/Web components
-web/ @Arpit529Srivastava
-*.js @Arpit529Srivastava
-*.ts @Arpit529Srivastava
-*.jsx @Arpit529Srivastava
-*.tsx @Arpit529Srivastava
-package.json @Arpit529Srivastava
-package-lock.json @Arpit529Srivastava
+web/ @Shrey327 @Arpit529Srivastava
+*.js @Shrey327 @Arpit529Srivastava
+*.ts @Shrey327 @Arpit529Srivastava
+*.jsx @Shrey327 @Arpit529Srivastava
+*.tsx @Shrey327 @Arpit529Srivastava
+package.json @Shrey327 @Arpit529Srivastava
+package-lock.json @Shrey327 @Arpit529Srivastava
 
 # Infrastructure and deployment
 deploy/ @Arpit529Srivastava
