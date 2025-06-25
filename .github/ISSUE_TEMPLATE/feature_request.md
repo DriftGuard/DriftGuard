@@ -1,9 +1,8 @@
 ---
 name: Feature Request
 about: Suggest an idea for DriftGuard
-title: '[FEATURE] '
-labels: ['enhancement', 'needs-triage']
-assignees: ['Arpit529Srivastava']
+title: '[FEATURE]: '
+labels: ['needs-triage']
 ---
 
 ## Problem Statement

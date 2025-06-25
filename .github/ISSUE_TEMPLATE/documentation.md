@@ -1,9 +1,8 @@
 ---
 name: Documentation Issue
 about: Report a documentation problem or request documentation improvements
-title: '[DOCS] '
-labels: ['documentation', 'needs-triage']
-assignees: ['Arpit529Srivastava']
+title: '[DOCS]: '
+labels: ['docs']
 ---
 
 ## Documentation Issue
