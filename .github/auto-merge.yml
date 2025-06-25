@@ -1,0 +1,59 @@
+rules:
+  - name: Auto-merge documentation updates
+    conditions:
+      - base=main
+      - label=documentation
+      - label=size/XS
+      - status-success=ci
+      - status-success=pr-checks
+    actions:
+      queue:
+        method: rebase
+        update_branch: true
+      merge:
+        method: squash
+        commit_message: "docs: {{ title }}"
+
+  - name: Auto-merge dependency updates
+    conditions:
+      - base=main
+      - label=dependencies
+      - status-success=ci
+      - status-success=pr-checks
+    actions:
+      queue:
+        method: rebase
+        update_branch: true
+      merge:
+        method: squash
+        commit_message: "deps: {{ title }}"
+
+  - name: Auto-merge small fixes
+    conditions:
+      - base=main
+      - label=size/XS
+      - label=bug
+      - status-success=ci
+      - status-success=pr-checks
+    actions:
+      queue:
+        method: rebase
+        update_branch: true
+      merge:
+        method: squash
+        commit_message: "fix: {{ title }}"
+
+  - name: Auto-merge CI/CD improvements
+    conditions:
+      - base=main
+      - label=ci-cd
+      - label=size/XS
+      - status-success=ci
+      - status-success=pr-checks
+    actions:
+      queue:
+        method: rebase
+        update_branch: true
+      merge:
+        method: squash
+        commit_message: "ci: {{ title }}" 

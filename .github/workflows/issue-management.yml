@@ -1,0 +1,149 @@
+name: Issue Management
+
+on:
+  issues:
+    types: [opened, edited, reopened, labeled, unlabeled]
+
+jobs:
+  # Auto-label issues
+  auto-label-issues:
+    name: Auto-label Issues
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened' || github.event.action == 'edited'
+    steps:
+      - name: Auto-label issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const title = issue.title.toLowerCase();
+            const body = issue.body.toLowerCase();
+            const labels = issue.labels.map(label => label.name);
+            
+            const labelsToAdd = new Set();
+            
+            // Label based on title and body content
+            if (title.includes('bug') || body.includes('bug') || title.includes('error') || body.includes('error')) {
+              labelsToAdd.add('bug');
+            }
+            
+            if (title.includes('feature') || body.includes('feature') || title.includes('enhancement') || body.includes('enhancement')) {
+              labelsToAdd.add('enhancement');
+            }
+            
+            if (title.includes('documentation') || body.includes('documentation') || title.includes('docs') || body.includes('docs')) {
+              labelsToAdd.add('documentation');
+            }
+            
+            if (title.includes('security') || body.includes('security') || title.includes('vulnerability') || body.includes('vulnerability')) {
+              labelsToAdd.add('security');
+            }
+            
+            if (title.includes('performance') || body.includes('performance') || title.includes('slow') || body.includes('slow')) {
+              labelsToAdd.add('performance');
+            }
+            
+            if (title.includes('ui') || body.includes('ui') || title.includes('ux') || body.includes('ux') || title.includes('frontend') || body.includes('frontend')) {
+              labelsToAdd.add('frontend');
+            }
+            
+            if (title.includes('backend') || body.includes('backend') || title.includes('api') || body.includes('api')) {
+              labelsToAdd.add('backend');
+            }
+            
+            if (title.includes('ai') || body.includes('ai') || title.includes('ml') || body.includes('ml') || title.includes('machine learning') || body.includes('machine learning')) {
+              labelsToAdd.add('ai-ml');
+            }
+            
+            // Add priority labels based on keywords
+            if (title.includes('urgent') || body.includes('urgent') || title.includes('critical') || body.includes('critical') || title.includes('blocker') || body.includes('blocker')) {
+              labelsToAdd.add('priority/high');
+            } else if (title.includes('important') || body.includes('important')) {
+              labelsToAdd.add('priority/medium');
+            } else {
+              labelsToAdd.add('priority/low');
+            }
+            
+            // Add needs-triage label for new issues
+            if (context.payload.action === 'opened') {
+              labelsToAdd.add('needs-triage');
+            }
+            
+            // Add labels
+            if (labelsToAdd.size > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: Array.from(labelsToAdd)
+              });
+            }
+
+  # Auto-assign issues
+  auto-assign-issues:
+    name: Auto-assign Issues
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened'
+    steps:
+      - name: Auto-assign issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const labels = issue.labels.map(label => label.name);
+            
+            // Assign based on labels
+            let assignee = 'Arpit529Srivastava'; // Default assignee
+            
+            if (labels.includes('frontend')) {
+              assignee = 'Arpit529Srivastava';
+            } else if (labels.includes('backend')) {
+              assignee = 'Arpit529Srivastava';
+            } else if (labels.includes('ai-ml')) {
+              assignee = 'Arpit529Srivastava';
+            } else if (labels.includes('security')) {
+              assignee = 'Arpit529Srivastava';
+            }
+            
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              assignees: [assignee]
+            });
+
+  # Issue triage automation
+  issue-triage:
+    name: Issue Triage
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened'
+    steps:
+      - name: Welcome new contributors
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const isFirstTimeContributor = issue.author_association === 'FIRST_TIME_CONTRIBUTOR';
+            
+            if (isFirstTimeContributor) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `🎉 Welcome to DriftGuard! Thank you for your first contribution!\n\nWe're excited to have you here. Our team will review your issue and get back to you soon. In the meantime, feel free to check out our [Contributing Guidelines](CONTRIBUTING.md) and [README](README.md) to learn more about the project.\n\nIf you have any questions, don't hesitate to ask!`
+              });
+            }
+
+  # Issue stale management
+  issue-stale:
+    name: Issue Stale Management
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened' || github.event.action == 'edited'
+    steps:
+      - name: Check for stale issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // This would typically be handled by GitHub's built-in stale issue management
+            // For now, we'll just log that this check ran
+            console.log('Stale issue management check completed'); 

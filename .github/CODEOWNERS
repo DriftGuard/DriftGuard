@@ -1,0 +1,42 @@
+# Global code owners
+* @Arpit529Srivastava 
+
+# Backend/Go code
+*.go @Arpit529Srivastava
+cmd/ @Arpit529Srivastava
+internal/ @Arpit529Srivastava
+pkg/ @Arpit529Srivastava
+
+# AI/ML components
+ai/ @Arpit529Srivastava
+*.py @Arpit529Srivastava
+requirements.txt @Arpit529Srivastava
+
+# Frontend/Web components
+web/ @Arpit529Srivastava
+*.js @Arpit529Srivastava
+*.ts @Arpit529Srivastava
+*.jsx @Arpit529Srivastava
+*.tsx @Arpit529Srivastava
+package.json @Arpit529Srivastava
+package-lock.json @Arpit529Srivastava
+
+# Infrastructure and deployment
+deploy/ @Arpit529Srivastava
+*.yaml @Arpit529Srivastava
+*.yml @Arpit529Srivastava
+Dockerfile* @Arpit529Srivastava
+helm/ @Arpit529Srivastava
+
+# Documentation
+*.md @Arpit529Srivastava
+docs/ @Arpit529Srivastava
+
+# CI/CD and GitHub workflows
+.github/ @Arpit529Srivastava
+.github/workflows/ @Arpit529Srivastava
+
+# Configuration files
+*.toml @Arpit529Srivastava
+*.json @Arpit529Srivastava
+*.env* @Arpit529Srivastava 
