@@ -18,7 +18,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Auto-assign PR
+      - name: Auto-assign and request reviewers for PR
         uses: actions/github-script@v7
         with:
           script: |
@@ -26,39 +26,71 @@ jobs:
               // Auto-assign the PR to code owners based on changed files
               const changedFiles = context.payload.pull_request.files.map(file => file.filename);
               
-              // Determine assignees based on file patterns and CODEOWNERS
+              // Determine assignees and reviewers based on file patterns
               const assignees = new Set();
+              const reviewers = new Set();
               
               // Check for ML/AI files
               const hasMLFiles = changedFiles.some(file => 
-                file.startsWith('ai/') || file.endsWith('.py') || file.includes('requirements.txt')
+                file.startsWith('ai/') || file.endsWith('.py') || file.includes('requirements.txt') ||
+                file.includes('model') || file.includes('ml') || file.includes('neural') ||
+                file.includes('tensorflow') || file.includes('pytorch') || file.includes('sklearn')
               );
               
               // Check for frontend files
               const hasFrontendFiles = changedFiles.some(file => 
                 file.startsWith('web/') || file.endsWith('.js') || file.endsWith('.ts') || 
-                file.endsWith('.jsx') || file.endsWith('.tsx') || file.includes('package.json')
+                file.endsWith('.jsx') || file.endsWith('.tsx') || file.includes('package.json') ||
+                file.includes('react') || file.includes('vue') || file.includes('angular') ||
+                file.includes('css') || file.includes('scss') || file.includes('sass')
               );
               
               // Check for backend files
               const hasBackendFiles = changedFiles.some(file => 
-                file.endsWith('.go') || file.startsWith('cmd/') || file.startsWith('internal/') || file.startsWith('pkg/')
+                file.endsWith('.go') || file.startsWith('cmd/') || file.startsWith('internal/') || 
+                file.startsWith('pkg/') || file.includes('main.go') || file.includes('server')
               );
               
-              // Assign based on file types
+              // Check for infrastructure/devops files
+              const hasInfraFiles = changedFiles.some(file => 
+                file.endsWith('.yaml') || file.endsWith('.yml') || file.includes('Dockerfile') ||
+                file.includes('docker-compose') || file.startsWith('deploy/') || file.startsWith('helm/') ||
+                file.includes('kubernetes') || file.includes('k8s') || file.includes('terraform') ||
+                file.includes('.github/workflows') || file.includes('ci/') || file.includes('cd/')
+              );
+              
+              // Check for documentation files
+              const hasDocFiles = changedFiles.some(file => 
+                file.endsWith('.md') || file.startsWith('docs/') || file.includes('README') ||
+                file.includes('CONTRIBUTING') || file.includes('LICENSE')
+              );
+              
+              // Assign and request reviewers based on file types
               if (hasMLFiles) {
                 assignees.add('Shrey327');
+                reviewers.add('Shrey327');
               }
               if (hasFrontendFiles) {
                 assignees.add('Shrey327');
+                reviewers.add('Shrey327');
               }
               if (hasBackendFiles) {
                 assignees.add('Arpit529Srivastava');
+                reviewers.add('Arpit529Srivastava');
+              }
+              if (hasInfraFiles) {
+                assignees.add('Arpit529Srivastava');
+                reviewers.add('Arpit529Srivastava');
+              }
+              if (hasDocFiles) {
+                assignees.add('Arpit529Srivastava');
+                reviewers.add('Arpit529Srivastava');
               }
               
               // Default assignee if no specific files detected
               if (assignees.size === 0) {
                 assignees.add('Arpit529Srivastava');
+                reviewers.add('Arpit529Srivastava');
               }
               
               // Add assignees
@@ -69,9 +101,18 @@ jobs:
                 assignees: Array.from(assignees)
               });
               
+              // Request reviewers
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+                reviewers: Array.from(reviewers)
+              });
+              
               console.log(`Assigned PR to: ${Array.from(assignees).join(', ')}`);
+              console.log(`Requested reviewers: ${Array.from(reviewers).join(', ')}`);
             } catch (error) {
-              console.log('Could not assign PR automatically:', error.message);
+              console.log('Could not assign PR or request reviewers automatically:', error.message);
               // Don't fail the workflow for assignment issues
             }
 
@@ -86,21 +127,55 @@ jobs:
               // Get changed files
               const changedFiles = context.payload.pull_request.files.map(file => file.filename);
               
-              // Define label rules based on file patterns
+              // Define enhanced label rules based on file patterns
               const labelRules = [
+                // Language-specific labels
                 { pattern: /\.go$/, label: 'go' },
                 { pattern: /\.py$/, label: 'python' },
                 { pattern: /\.(js|jsx|ts|tsx)$/, label: 'frontend' },
                 { pattern: /\.(yaml|yml)$/, label: 'infrastructure' },
                 { pattern: /Dockerfile/, label: 'docker' },
                 { pattern: /\.md$/, label: 'documentation' },
+                
+                // Directory-based labels
                 { pattern: /\.github\/workflows/, label: 'ci-cd' },
                 { pattern: /deploy\//, label: 'deployment' },
-                { pattern: /ai\//, label: 'ai-ml' },
+                { pattern: /ai\//, label: 'ml' },
                 { pattern: /web\//, label: 'frontend' },
                 { pattern: /cmd\//, label: 'backend' },
                 { pattern: /internal\//, label: 'backend' },
-                { pattern: /pkg\//, label: 'backend' }
+                { pattern: /pkg\//, label: 'backend' },
+                { pattern: /helm\//, label: 'devops' },
+                { pattern: /kubernetes\//, label: 'devops' },
+                { pattern: /terraform\//, label: 'devops' },
+                { pattern: /ci\//, label: 'ci-cd' },
+                { pattern: /cd\//, label: 'ci-cd' },
+                
+                // Content-based labels
+                { pattern: /model/, label: 'ml' },
+                { pattern: /neural/, label: 'ml' },
+                { pattern: /tensorflow/, label: 'ml' },
+                { pattern: /pytorch/, label: 'ml' },
+                { pattern: /sklearn/, label: 'ml' },
+                { pattern: /react/, label: 'frontend' },
+                { pattern: /vue/, label: 'frontend' },
+                { pattern: /angular/, label: 'frontend' },
+                { pattern: /css/, label: 'frontend' },
+                { pattern: /scss/, label: 'frontend' },
+                { pattern: /sass/, label: 'frontend' },
+                { pattern: /server/, label: 'backend' },
+                { pattern: /api/, label: 'backend' },
+                { pattern: /kubernetes/, label: 'devops' },
+                { pattern: /k8s/, label: 'devops' },
+                { pattern: /terraform/, label: 'devops' },
+                { pattern: /docker-compose/, label: 'docker' },
+                { pattern: /requirements\.txt/, label: 'python' },
+                { pattern: /package\.json/, label: 'frontend' },
+                { pattern: /go\.mod/, label: 'go' },
+                { pattern: /go\.sum/, label: 'go' },
+                { pattern: /README/, label: 'documentation' },
+                { pattern: /CONTRIBUTING/, label: 'documentation' },
+                { pattern: /LICENSE/, label: 'documentation' }
               ];
               
               // Determine labels to add
@@ -112,6 +187,47 @@ jobs:
                     labelsToAdd.add(rule.label);
                   }
                 }
+              }
+              
+              // Add category labels based on file types
+              const hasMLFiles = changedFiles.some(file => 
+                file.startsWith('ai/') || file.endsWith('.py') || file.includes('requirements.txt') ||
+                file.includes('model') || file.includes('ml') || file.includes('neural') ||
+                file.includes('tensorflow') || file.includes('pytorch') || file.includes('sklearn')
+              );
+              
+              const hasFrontendFiles = changedFiles.some(file => 
+                file.startsWith('web/') || file.endsWith('.js') || file.endsWith('.ts') || 
+                file.endsWith('.jsx') || file.endsWith('.tsx') || file.includes('package.json') ||
+                file.includes('react') || file.includes('vue') || file.includes('angular') ||
+                file.includes('css') || file.includes('scss') || file.includes('sass')
+              );
+              
+              const hasBackendFiles = changedFiles.some(file => 
+                file.endsWith('.go') || file.startsWith('cmd/') || file.startsWith('internal/') || 
+                file.startsWith('pkg/') || file.includes('main.go') || file.includes('server')
+              );
+              
+              const hasInfraFiles = changedFiles.some(file => 
+                file.endsWith('.yaml') || file.endsWith('.yml') || file.includes('Dockerfile') ||
+                file.includes('docker-compose') || file.startsWith('deploy/') || file.startsWith('helm/') ||
+                file.includes('kubernetes') || file.includes('k8s') || file.includes('terraform') ||
+                file.includes('.github/workflows') || file.includes('ci/') || file.includes('cd/')
+              );
+              
+              // Add category labels
+              if (hasMLFiles) {
+                labelsToAdd.add('ml');
+              }
+              if (hasFrontendFiles) {
+                labelsToAdd.add('frontend');
+              }
+              if (hasBackendFiles) {
+                labelsToAdd.add('backend');
+              }
+              if (hasInfraFiles) {
+                labelsToAdd.add('devops');
+                labelsToAdd.add('infra');
               }
               
               // Add size label based on PR size
@@ -140,6 +256,8 @@ jobs:
                   labels: Array.from(labelsToAdd)
                 });
               }
+              
+              console.log(`Added labels: ${Array.from(labelsToAdd).join(', ')}`);
             } catch (error) {
               console.log('Could not add labels automatically:', error.message);
               // Don't fail the workflow for labeling issues
