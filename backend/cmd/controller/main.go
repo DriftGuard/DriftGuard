@@ -77,8 +77,6 @@ func main() {
 	}
 	logger.Info("Configuration loaded successfully")
 
-	// Health service is initialized within the server package
-
 	// Initialize lifecycle manager
 	lifecycleMgr := lifecycle.NewLifecycleManager(logger)
 
@@ -93,7 +91,7 @@ func main() {
 
 	// Initialize Kubernetes watcher
 	logger.Info("Initializing Kubernetes watcher")
-	k8sWatcher, err := watcher.NewKubernetesWatcher(cfg.Kubernetes)
+	k8sWatcher, err := watcher.NewKubernetesWatcher(cfg.Kubernetes, logger, db)
 	if err != nil {
 		logger.Fatal("Failed to initialize Kubernetes watcher", zap.Error(err))
 	}
@@ -113,14 +111,14 @@ func main() {
 	lifecycleMgr.RegisterComponent(&lifecycleComponent{
 		name:   "database",
 		start:  func(ctx context.Context) error { return nil },
-		stop:   func(ctx context.Context) error { return db.Close(); return nil },
+		stop:   func(ctx context.Context) error { return db.Close() },
 		health: func(ctx context.Context) error { return nil },
 	})
 
 	lifecycleMgr.RegisterComponent(&lifecycleComponent{
 		name:   "kubernetes-watcher",
-		start:  func(ctx context.Context) error { return nil },
-		stop:   func(ctx context.Context) error { return nil },
+		start:  func(ctx context.Context) error { return k8sWatcher.WatchResources(ctx) },
+		stop:   func(ctx context.Context) error { return k8sWatcher.Stop() },
 		health: func(ctx context.Context) error { return nil },
 	})
 
