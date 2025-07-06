@@ -34,19 +34,21 @@ type DatabaseConfig struct {
 	Host     string `yaml:"host"`
 	Port     int    `yaml:"port"`
 	User     string `yaml:"user"`
-	Password string `yaml:"password"`
 	DBName   string `yaml:"dbname"`
-	SSLMode  string `yaml:"sslmode"`
-	MaxConns int    `yaml:"max_conns"`
+	Password string `yaml:"password"`
 }
 
 // KubernetesConfig represents Kubernetes client configuration
 type KubernetesConfig struct {
-	ConfigPath string            `yaml:"config_path"`
-	Context    string            `yaml:"context"`
-	Namespaces []string          `yaml:"namespaces"`
-	Resources  []string          `yaml:"resources"`
-	Labels     map[string]string `yaml:"labels"`
+	ConfigPath       string            `yaml:"config_path"`
+	Context          string            `yaml:"context"`
+	Namespaces       []string          `yaml:"namespaces"`
+	Resources        []string          `yaml:"resources"`
+	Labels           map[string]string `yaml:"labels"`
+	EnableSnapshots  bool              `yaml:"enable_snapshots"`
+	SnapshotInterval time.Duration     `yaml:"snapshot_interval"`
+	SkipSystemNS     bool              `yaml:"skip_system_namespaces"`
+	SkipFrequentPods bool              `yaml:"skip_frequent_pods"`
 }
 
 // GitConfig represents Git repository configuration
@@ -112,15 +114,9 @@ func (c *Config) setDefaults() {
 		c.Server.ShutdownTimeout = 30 * time.Second
 	}
 
-	// Database defaults
+	// Database defaults - MongoDB
 	if c.Database.Port == 0 {
-		c.Database.Port = 5432
-	}
-	if c.Database.SSLMode == "" {
-		c.Database.SSLMode = "disable"
-	}
-	if c.Database.MaxConns == 0 {
-		c.Database.MaxConns = 10
+		c.Database.Port = 27017
 	}
 
 	// Kubernetes defaults
@@ -167,9 +163,6 @@ func (c *Config) validate() error {
 	if c.Database.Host == "" {
 		return fmt.Errorf("database host is required")
 	}
-	if c.Database.User == "" {
-		return fmt.Errorf("database user is required")
-	}
 	if c.Database.DBName == "" {
 		return fmt.Errorf("database name is required")
 	}
@@ -192,13 +185,19 @@ func (c *Config) validate() error {
 
 // GetDatabaseURL returns the database connection URL
 func (c *Config) GetDatabaseURL() string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		c.Database.User,
-		c.Database.Password,
+	if c.Database.User != "" && c.Database.Password != "" {
+		return fmt.Sprintf("mongodb://%s:%s@%s:%d/%s",
+			c.Database.User,
+			c.Database.Password,
+			c.Database.Host,
+			c.Database.Port,
+			c.Database.DBName,
+		)
+	}
+	return fmt.Sprintf("mongodb://%s:%d/%s",
 		c.Database.Host,
 		c.Database.Port,
 		c.Database.DBName,
-		c.Database.SSLMode,
 	)
 }
 

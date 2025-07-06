@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -225,7 +226,7 @@ func (m *Metrics) HTTPMiddleware(next http.Handler) http.Handler {
 		// Record metrics
 		duration := time.Since(start).Seconds()
 		m.httpRequestDuration.WithLabelValues(r.Method, r.URL.Path).Observe(duration)
-		m.httpRequestsTotal.WithLabelValues(r.Method, r.URL.Path, string(rw.statusCode)).Inc()
+		m.httpRequestsTotal.WithLabelValues(r.Method, r.URL.Path, fmt.Sprintf("%d", rw.statusCode)).Inc()
 	})
 }
 
