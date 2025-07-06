@@ -57,7 +57,7 @@ func TestHealthService(t *testing.T) {
 	}
 
 	// Test HTTP handler
-	req := httptest.NewRequest("GET", "/health", nil)
+	req := httptest.NewRequest("GET", "/health?readiness=true", nil)
 	w := httptest.NewRecorder()
 	hs.ServeHTTP(w, req)
 
