@@ -7,19 +7,30 @@ server:
 
 database:
   host: localhost
-  port: 5432
-  user: driftguard
-  password: password
+  port: 27017
   dbname: driftguard
-  sslmode: disable
-  max_conns: 10
+  user: ""
 
 kubernetes:
-  config_path: ""
+  config_path: "/Users/arpitsrivastava/.kube/config"
   context: ""
-  namespaces: ["default"]
-  resources: ["deployments", "services", "configmaps", "secrets"]
+  namespaces: ["DriftGuard"]
+  resources: [
+    "deployments",     # Application deployments
+    "services",        # Network services
+    "configmaps",      # Configuration data
+    "secrets"          # Sensitive data
+    # "pods",          # Commented out - too frequent changes
+    # "ingresses",     # Commented out - not needed
+    # "persistentvolumeclaims", # Commented out - storage
+    # "serviceaccounts",       # Commented out - RBAC
+    # "networkpolicies"        # Commented out - networking
+  ]
   labels: {}
+  enable_snapshots: true
+  snapshot_interval: 5m
+  skip_system_namespaces: true
+  skip_frequent_pods: true
 
 git:
   default_branch: main

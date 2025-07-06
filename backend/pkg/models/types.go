@@ -10,38 +10,38 @@ import (
 
 // ConfigurationSnapshot represents a snapshot of a Kubernetes resource configuration
 type ConfigurationSnapshot struct {
-	ID           uuid.UUID       `json:"id" db:"id"`
-	Environment  string          `json:"environment" db:"environment"`
-	Namespace    string          `json:"namespace" db:"namespace"`
-	ResourceType string          `json:"resource_type" db:"resource_type"`
-	ResourceName string          `json:"resource_name" db:"resource_name"`
-	GitCommit    string          `json:"git_commit" db:"git_commit"`
-	GitBranch    string          `json:"git_branch" db:"git_branch"`
-	LiveState    json.RawMessage `json:"live_state" db:"live_state"`
-	DesiredState json.RawMessage `json:"desired_state" db:"desired_state"`
-	DriftScore   float64         `json:"drift_score" db:"drift_score"`
-	CreatedAt    time.Time       `json:"created_at" db:"created_at"`
-	UpdatedAt    time.Time       `json:"updated_at" db:"updated_at"`
+	ID           uuid.UUID       `json:"id" bson:"id"`
+	Environment  string          `json:"environment" bson:"environment"`
+	Namespace    string          `json:"namespace" bson:"namespace"`
+	ResourceType string          `json:"resource_type" bson:"resource_type"`
+	ResourceName string          `json:"resource_name" bson:"resource_name"`
+	GitCommit    string          `json:"git_commit" bson:"git_commit"`
+	GitBranch    string          `json:"git_branch" bson:"git_branch"`
+	LiveState    json.RawMessage `json:"live_state" bson:"live_state"`
+	DesiredState json.RawMessage `json:"desired_state" bson:"desired_state"`
+	DriftScore   float64         `json:"drift_score" bson:"drift_score"`
+	CreatedAt    time.Time       `json:"created_at" bson:"created_at"`
+	UpdatedAt    time.Time       `json:"updated_at" bson:"updated_at"`
 }
 
 // DriftEvent represents a detected configuration drift event
 type DriftEvent struct {
-	ID              uuid.UUID       `json:"id" db:"id"`
-	SnapshotID      uuid.UUID       `json:"snapshot_id" db:"snapshot_id"`
-	Environment     string          `json:"environment" db:"environment"`
-	Namespace       string          `json:"namespace" db:"namespace"`
-	ResourceType    string          `json:"resource_type" db:"resource_type"`
-	ResourceName    string          `json:"resource_name" db:"resource_name"`
-	DriftType       DriftType       `json:"drift_type" db:"drift_type"`
-	Severity        Severity        `json:"severity" db:"severity"`
-	Description     string          `json:"description" db:"description"`
-	Details         json.RawMessage `json:"details" db:"details"`
-	Remediation     string          `json:"remediation" db:"remediation"`
-	Status          EventStatus     `json:"status" db:"status"`
-	DetectedAt      time.Time       `json:"detected_at" db:"detected_at"`
-	ResolvedAt      *time.Time      `json:"resolved_at" db:"resolved_at"`
-	ResolvedBy      *string         `json:"resolved_by" db:"resolved_by"`
-	ResolutionNotes *string         `json:"resolution_notes" db:"resolution_notes"`
+	ID              uuid.UUID       `json:"id" bson:"id"`
+	SnapshotID      uuid.UUID       `json:"snapshot_id" bson:"snapshot_id"`
+	Environment     string          `json:"environment" bson:"environment"`
+	Namespace       string          `json:"namespace" bson:"namespace"`
+	ResourceType    string          `json:"resource_type" bson:"resource_type"`
+	ResourceName    string          `json:"resource_name" bson:"resource_name"`
+	DriftType       DriftType       `json:"drift_type" bson:"drift_type"`
+	Severity        Severity        `json:"severity" bson:"severity"`
+	Description     string          `json:"description" bson:"description"`
+	Details         json.RawMessage `json:"details" bson:"details"`
+	Remediation     string          `json:"remediation" bson:"remediation"`
+	Status          EventStatus     `json:"status" bson:"status"`
+	DetectedAt      time.Time       `json:"detected_at" bson:"detected_at"`
+	ResolvedAt      *time.Time      `json:"resolved_at" bson:"resolved_at"`
+	ResolvedBy      *string         `json:"resolved_by" bson:"resolved_by"`
+	ResolutionNotes *string         `json:"resolution_notes" bson:"resolution_notes"`
 }
 
 // DriftType represents the type of configuration drift
