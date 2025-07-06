@@ -1,8 +1,15 @@
 package server
 
 import (
+	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/DriftGuard/core/internal/config"
 	"github.com/DriftGuard/core/internal/controller"
+	"github.com/DriftGuard/core/internal/health"
+	"github.com/DriftGuard/core/internal/metrics"
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
@@ -41,46 +48,61 @@ import (
 // - CORS configuration
 
 type Server struct {
-	// TODO: Add real server fields
-	// - router *gin.Engine
-	// - config config.ServerConfig
-	// - controller *controller.DriftController
-	// - logger *zap.Logger
-	// - server *http.Server
-	// - middleware []gin.HandlerFunc
-	// - metrics *ServerMetrics
+	router     *gin.Engine
+	config     config.ServerConfig
+	controller *controller.DriftController
+	logger     *zap.Logger
+	server     *http.Server
+	healthSvc  *health.HealthService
+	metrics    *metrics.Metrics
 }
 
 func New(cfg config.ServerConfig, controller *controller.DriftController, logger *zap.Logger) *Server {
-	// TODO: Replace mock implementation with real HTTP server initialization
-	//
-	// Implementation steps:
-	// 1. Initialize Gin router with proper configuration
-	// 2. Set up middleware (CORS, logging, auth, rate limiting)
-	// 3. Define API routes and handlers
-	// 4. Configure request validation
-	// 5. Set up error handling middleware
-	// 6. Initialize metrics collection
-	// 7. Configure security headers
-	// 8. Set up graceful shutdown handling
+	// Initialize Gin router
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.New()
 
-	return &Server{}
+	// Initialize health service and metrics
+	healthSvc := health.NewHealthService(logger)
+	metrics := metrics.NewMetrics(logger)
+
+	server := &Server{
+		router:     router,
+		config:     cfg,
+		controller: controller,
+		logger:     logger,
+		healthSvc:  healthSvc,
+		metrics:    metrics,
+	}
+
+	// Set up middleware
+	server.setupMiddleware()
+
+	// Set up routes
+	server.setupRoutes()
+
+	return server
 }
 
 func (s *Server) Start(port int) error {
-	// TODO: Replace blocking server with real HTTP server
-	//
-	// Implementation steps:
-	// 1. Create HTTP server with Gin router
-	// 2. Configure server timeouts from config
-	// 3. Start server on specified port
-	// 4. Handle server startup errors
-	// 5. Log server startup information
-	// 6. Set up graceful shutdown handling
-	// 7. Monitor server health
-	// 8. Handle connection errors
+	s.logger.Info("Starting HTTP server", zap.Int("port", port))
 
-	select {} // block forever (simulate running server)
+	// Create HTTP server
+	s.server = &http.Server{
+		Addr:         fmt.Sprintf(":%d", port),
+		Handler:      s.router,
+		ReadTimeout:  s.config.ReadTimeout,
+		WriteTimeout: s.config.WriteTimeout,
+		IdleTimeout:  s.config.IdleTimeout,
+	}
+
+	// Start server
+	if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		s.logger.Error("Failed to start HTTP server", zap.Error(err))
+		return err
+	}
+
+	return nil
 }
 
 func (s *Server) Shutdown(ctx interface{}) error {
@@ -94,51 +116,134 @@ func (s *Server) Shutdown(ctx interface{}) error {
 	return nil
 }
 
-// TODO: Add the following API handler methods:
+// setupMiddleware configures all middleware
+func (s *Server) setupMiddleware() {
+	// Recovery middleware
+	s.router.Use(gin.Recovery())
 
-// Health check endpoint
-// func (s *Server) getHealth(c *gin.Context)
+	// Logging middleware
+	s.router.Use(s.loggingMiddleware())
 
-// List configuration snapshots
-// func (s *Server) getSnapshots(c *gin.Context)
+	// Metrics middleware
+	s.router.Use(s.metricsMiddleware())
+}
 
-// Get specific snapshot by ID
-// func (s *Server) getSnapshot(c *gin.Context)
+// setupRoutes configures all API routes
+func (s *Server) setupRoutes() {
+	// Health check endpoints
+	s.router.GET("/health", s.getHealth)
+	s.router.GET("/ready", s.getReady)
 
-// List drift events with filtering
-// func (s *Server) getDriftEvents(c *gin.Context)
+	// Metrics endpoint
+	s.router.GET("/metrics", s.getMetrics)
 
-// Get specific drift event by ID
-// func (s *Server) getDriftEvent(c *gin.Context)
+	// API v1 routes
+	v1 := s.router.Group("/api/v1")
+	{
+		v1.GET("/health", s.getHealth)
+		v1.GET("/snapshots", s.getSnapshots)
+		v1.GET("/snapshots/:id", s.getSnapshot)
+		v1.GET("/drifts", s.getDriftEvents)
+		v1.GET("/drifts/:id", s.getDriftEvent)
+		v1.POST("/drifts/:id/remediate", s.remediateDrift)
+		v1.GET("/environments", s.getEnvironments)
+		v1.GET("/statistics", s.getStatistics)
+	}
+}
 
-// Remediate a drift event
-// func (s *Server) remediateDrift(c *gin.Context)
+// loggingMiddleware logs all requests
+func (s *Server) loggingMiddleware() gin.HandlerFunc {
+	return gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
+		s.logger.Info("HTTP Request",
+			zap.String("method", param.Method),
+			zap.String("path", param.Path),
+			zap.Int("status", param.StatusCode),
+			zap.Duration("latency", param.Latency),
+			zap.String("client_ip", param.ClientIP),
+			zap.String("user_agent", param.Request.UserAgent()),
+		)
+		return ""
+	})
+}
 
-// List environments
-// func (s *Server) getEnvironments(c *gin.Context)
+// metricsMiddleware records metrics for all requests
+func (s *Server) metricsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+		_ = time.Since(start) // Duration captured by metrics middleware
 
-// Get drift statistics
-// func (s *Server) getStatistics(c *gin.Context)
+		// Record metrics using the HTTP middleware
+		s.metrics.HTTPMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// This will be handled by the metrics middleware
+		})).ServeHTTP(c.Writer, c.Request)
+	}
+}
 
-// Prometheus metrics endpoint
-// func (s *Server) getMetrics(c *gin.Context)
+// API handler methods
 
-// WebSocket endpoint for real-time updates
-// func (s *Server) handleWebSocket(c *gin.Context)
+func (s *Server) getHealth(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "healthy",
+		"message": "Service is running",
+		"time":    time.Now().UTC(),
+	})
+}
 
-// TODO: Add middleware functions:
+func (s *Server) getReady(c *gin.Context) {
+	// Check if all components are ready
+	status, message := s.healthSvc.GetOverallStatus(c.Request.Context())
+	if status != health.StatusHealthy {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"status":  "not ready",
+			"message": message,
+			"time":    time.Now().UTC(),
+		})
+		return
+	}
 
-// Authentication middleware
-// func (s *Server) authMiddleware() gin.HandlerFunc
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "ready",
+		"message": "All components are ready",
+		"time":    time.Now().UTC(),
+	})
+}
 
-// Rate limiting middleware
-// func (s *Server) rateLimitMiddleware() gin.HandlerFunc
+func (s *Server) getMetrics(c *gin.Context) {
+	s.metrics.Handler().ServeHTTP(c.Writer, c.Request)
+}
 
-// Request logging middleware
-// func (s *Server) loggingMiddleware() gin.HandlerFunc
+func (s *Server) getSnapshots(c *gin.Context) {
+	// TODO: Implement snapshot listing
+	c.JSON(http.StatusOK, gin.H{"message": "Snapshots endpoint - not implemented yet"})
+}
 
-// CORS middleware
-// func (s *Server) corsMiddleware() gin.HandlerFunc
+func (s *Server) getSnapshot(c *gin.Context) {
+	// TODO: Implement snapshot retrieval
+	c.JSON(http.StatusOK, gin.H{"message": "Snapshot endpoint - not implemented yet"})
+}
 
-// Error handling middleware
-// func (s *Server) errorHandler() gin.HandlerFunc
+func (s *Server) getDriftEvents(c *gin.Context) {
+	// TODO: Implement drift events listing
+	c.JSON(http.StatusOK, gin.H{"message": "Drift events endpoint - not implemented yet"})
+}
+
+func (s *Server) getDriftEvent(c *gin.Context) {
+	// TODO: Implement drift event retrieval
+	c.JSON(http.StatusOK, gin.H{"message": "Drift event endpoint - not implemented yet"})
+}
+
+func (s *Server) remediateDrift(c *gin.Context) {
+	// TODO: Implement drift remediation
+	c.JSON(http.StatusOK, gin.H{"message": "Drift remediation endpoint - not implemented yet"})
+}
+
+func (s *Server) getEnvironments(c *gin.Context) {
+	// TODO: Implement environments listing
+	c.JSON(http.StatusOK, gin.H{"message": "Environments endpoint - not implemented yet"})
+}
+
+func (s *Server) getStatistics(c *gin.Context) {
+	// TODO: Implement statistics
+	c.JSON(http.StatusOK, gin.H{"message": "Statistics endpoint - not implemented yet"})
+}
