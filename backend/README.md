@@ -4,7 +4,7 @@ DriftGuard is a Kubernetes drift detection system that monitors your cluster res
 
 ## Current Implementation Status
 
-### ✅ Implemented Features
+### Implemented Features
 
 - **Configuration Management**: Complete YAML-based configuration system with validation
 - **Database Layer**: MongoDB integration with connection pooling, indexing, and metrics
@@ -16,14 +16,14 @@ DriftGuard is a Kubernetes drift detection system that monitors your cluster res
 - **Snapshot Storage**: Efficient snapshot saving with throttling and filtering
 - **Health Checks**: Built-in health monitoring for all components
 
-### 🚧 Partially Implemented Features
+### Partially Implemented Features
 
 - **Controller**: Basic structure in place, needs drift detection logic
 - **Git Integration**: Structure defined, needs implementation
 - **MCP Client**: Structure defined, needs AI/ML integration
 - **Logger**: Basic structure, needs configurable implementation
 
-### 📋 TODO Features
+### TODO Features
 
 - **Drift Detection Logic**: Compare live state with Git desired state
 - **Git Repository Integration**: Clone, pull, and compare with Git repos
