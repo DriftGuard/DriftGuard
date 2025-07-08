@@ -5,8 +5,8 @@
 # Backend/Go code
 *.go @Arpit529Srivastava
 cmd/ @Arpit529Srivastava
-internal/ @Arpit529Srivastava
-pkg/ @Arpit529Srivastava
+internal/ @Arpit529Srivastava @Shrey327
+pkg/ @Arpit529Srivastava @Shrey327
 
 # AI/ML components
 ai/ @Shrey327
@@ -30,7 +30,7 @@ Dockerfile* @Arpit529Srivastava
 helm/ @Arpit529Srivastava
 
 # Documentation
-*.md @Arpit529Srivastava
+*.md @Arpit529Srivastava @Shrey327
 docs/ @Arpit529Srivastava
 
 # CI/CD and GitHub workflows
@@ -38,6 +38,6 @@ docs/ @Arpit529Srivastava
 .github/workflows/ @Arpit529Srivastava
 
 # Configuration files
-*.toml @Arpit529Srivastava
-*.json @Arpit529Srivastava
-*.env* @Arpit529Srivastava 
+*.toml @Arpit529Srivastava @Shrey327
+*.json @Arpit529Srivastava @Shrey327
+*.env* @Arpit529Srivastava @Shrey327
