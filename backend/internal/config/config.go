@@ -15,7 +15,6 @@ type Config struct {
 	Database     DatabaseConfig       `yaml:"database"`
 	Kubernetes   KubernetesConfig     `yaml:"kubernetes"`
 	Git          GitConfig            `yaml:"git"`
-	MCP          MCPConfig            `yaml:"mcp"`
 	Environments []models.Environment `yaml:"environments"`
 	Logging      LoggingConfig        `yaml:"logging"`
 }
@@ -56,13 +55,6 @@ type GitConfig struct {
 	DefaultBranch string        `yaml:"default_branch"`
 	CloneTimeout  time.Duration `yaml:"clone_timeout"`
 	PullTimeout   time.Duration `yaml:"pull_timeout"`
-}
-
-// MCPConfig represents Model Context Protocol configuration
-type MCPConfig struct {
-	Endpoint string        `yaml:"endpoint"`
-	Timeout  time.Duration `yaml:"timeout"`
-	Retries  int           `yaml:"retries"`
 }
 
 // LoggingConfig represents logging configuration
@@ -138,17 +130,6 @@ func (c *Config) setDefaults() {
 		c.Git.PullTimeout = 2 * time.Minute
 	}
 
-	// MCP defaults
-	if c.MCP.Endpoint == "" {
-		c.MCP.Endpoint = "localhost:9000"
-	}
-	if c.MCP.Timeout == 0 {
-		c.MCP.Timeout = 30 * time.Second
-	}
-	if c.MCP.Retries == 0 {
-		c.MCP.Retries = 3
-	}
-
 	// Logging defaults
 	if c.Logging.Level == "" {
 		c.Logging.Level = "info"
@@ -165,19 +146,6 @@ func (c *Config) validate() error {
 	}
 	if c.Database.DBName == "" {
 		return fmt.Errorf("database name is required")
-	}
-
-	if len(c.Environments) == 0 {
-		return fmt.Errorf("at least one environment must be configured")
-	}
-
-	for i, env := range c.Environments {
-		if env.Name == "" {
-			return fmt.Errorf("environment %d: name is required", i)
-		}
-		if env.GitRepo.URL == "" {
-			return fmt.Errorf("environment %s: git repository URL is required", env.Name)
-		}
 	}
 
 	return nil

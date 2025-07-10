@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 	"time"
 
@@ -14,10 +15,8 @@ import (
 	"github.com/DriftGuard/core/internal/controller"
 	"github.com/DriftGuard/core/internal/database"
 	"github.com/DriftGuard/core/internal/lifecycle"
-	"github.com/DriftGuard/core/internal/logger"
 	"github.com/DriftGuard/core/internal/metrics"
 	"github.com/DriftGuard/core/internal/server"
-	"github.com/DriftGuard/core/internal/watcher"
 	"go.uber.org/zap"
 )
 
@@ -39,6 +38,13 @@ var (
 )
 
 func main() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "PANIC: %v\n%s\n", r, debug.Stack())
+			os.Exit(2)
+		}
+	}()
+
 	flag.Parse()
 
 	// Show version and exit if requested
@@ -49,14 +55,12 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Print startup banner
 	fmt.Println("Starting DriftGuard Controller...")
 	fmt.Printf("Version: %s\n", Version)
 	fmt.Printf("Build Date: %s\n", BuildDate)
 	fmt.Printf("Git Commit: %s\n", GitCommit)
 
-	// Initialize logger
-	logger := logger.New()
+	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 
 	logger.Info("Starting DriftGuard Controller",
@@ -73,7 +77,9 @@ func main() {
 	logger.Info("Loading configuration", zap.String("config_file", *configFile))
 	cfg, err := config.Load(*configFile)
 	if err != nil {
-		logger.Fatal("Failed to load configuration", zap.Error(err))
+		logger.Error("Failed to load configuration", zap.Error(err))
+		fmt.Fprintf(os.Stderr, "Failed to load configuration: %v\n", err)
+		os.Exit(1)
 	}
 	logger.Info("Configuration loaded successfully")
 
@@ -84,22 +90,17 @@ func main() {
 	logger.Info("Initializing database")
 	db, err := database.New(cfg.Database)
 	if err != nil {
-		logger.Fatal("Failed to initialize database", zap.Error(err))
+		logger.Error("Failed to initialize database", zap.Error(err))
+		fmt.Fprintf(os.Stderr, "Failed to initialize database: %v\n", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 	logger.Info("Database initialized successfully")
 
-	// Initialize Kubernetes watcher
-	logger.Info("Initializing Kubernetes watcher")
-	k8sWatcher, err := watcher.NewKubernetesWatcher(cfg.Kubernetes, logger, db)
-	if err != nil {
-		logger.Fatal("Failed to initialize Kubernetes watcher", zap.Error(err))
-	}
-	logger.Info("Kubernetes watcher initialized successfully")
 
 	// Initialize drift controller
 	logger.Info("Initializing drift controller")
-	driftController := controller.NewDriftController(cfg, db, k8sWatcher, logger)
+	driftController := controller.NewDriftController(cfg, db, logger)
 	logger.Info("Drift controller initialized successfully")
 
 	// Initialize HTTP server
@@ -112,14 +113,7 @@ func main() {
 		name:   "database",
 		start:  func(ctx context.Context) error { return nil },
 		stop:   func(ctx context.Context) error { return db.Close() },
-		health: func(ctx context.Context) error { return nil },
-	})
-
-	lifecycleMgr.RegisterComponent(&lifecycleComponent{
-		name:   "kubernetes-watcher",
-		start:  func(ctx context.Context) error { return k8sWatcher.WatchResources(ctx) },
-		stop:   func(ctx context.Context) error { return k8sWatcher.Stop() },
-		health: func(ctx context.Context) error { return nil },
+		health: func(ctx context.Context) error { return db.HealthCheck(ctx) },
 	})
 
 	lifecycleMgr.RegisterComponent(&lifecycleComponent{
@@ -136,7 +130,9 @@ func main() {
 	// Start application lifecycle
 	logger.Info("Starting application lifecycle")
 	if err := lifecycleMgr.Start(ctx); err != nil {
-		logger.Fatal("Failed to start application lifecycle", zap.Error(err))
+		logger.Error("Failed to start application lifecycle", zap.Error(err))
+		fmt.Fprintf(os.Stderr, "Failed to start application lifecycle: %v\n", err)
+		os.Exit(1)
 	}
 
 	// Start HTTP server
@@ -144,6 +140,7 @@ func main() {
 		logger.Info("Starting HTTP server", zap.Int("port", *port))
 		if err := httpServer.Start(*port); err != nil && err != http.ErrServerClosed {
 			logger.Error("Failed to start HTTP server", zap.Error(err))
+			fmt.Fprintf(os.Stderr, "Failed to start HTTP server: %v\n", err)
 			cancel()
 		}
 	}()
@@ -181,11 +178,13 @@ func main() {
 	// Stop lifecycle manager
 	if err := lifecycleMgr.Stop(shutdownCtx); err != nil {
 		logger.Error("Error during lifecycle shutdown", zap.Error(err))
+		fmt.Fprintf(os.Stderr, "Error during lifecycle shutdown: %v\n", err)
 	}
 
 	// Shutdown HTTP server
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		logger.Error("Error during server shutdown", zap.Error(err))
+		fmt.Fprintf(os.Stderr, "Error during server shutdown: %v\n", err)
 	}
 
 	logger.Info("DriftGuard Controller stopped successfully")

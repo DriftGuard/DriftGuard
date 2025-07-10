@@ -1,131 +1,117 @@
 package controller
 
 import (
+	"context"
+	"time"
+
 	"github.com/DriftGuard/core/internal/config"
 	"github.com/DriftGuard/core/internal/database"
-	"github.com/DriftGuard/core/internal/watcher"
+	"github.com/DriftGuard/core/pkg/models"
 	"go.uber.org/zap"
 )
 
-// TODO: Drift Detection Controller Implementation
-//
-// PHASE 2 PRIORITY 4: Implement core drift detection logic
-//
-// Current Status: Mock implementation - empty struct with no logic
-// Next Steps:
-// 1. Implement real drift detection algorithm
-// 2. Add Git integration for desired state comparison
-// 3. Create drift analysis and classification logic
-// 4. Implement remediation strategies
-// 5. Add drift event processing pipeline
-// 6. Create drift scoring and risk assessment
-// 7. Implement drift history and trending
-// 8. Add drift notification system
-//
-// Required Methods to Implement:
-// - Start(ctx context.Context) error - Main drift detection loop
-// - Stop() error - Graceful shutdown
-// - detectDrift(live, desired *models.KubernetesResource) (*models.DriftEvent, error)
-// - analyzeDrift(event *models.DriftEvent) (*models.DriftAnalysis, error)
-// - remediateDrift(event *models.DriftEvent) error
-// - processDriftEvent(event *models.DriftEvent) error
-// - calculateDriftScore(live, desired *models.KubernetesResource) float64
-// - classifyDriftType(live, desired *models.KubernetesResource) models.DriftType
-//
-// Drift Detection Algorithm:
-// 1. Monitor Kubernetes resources for changes
-// 2. Compare live state with Git desired state
-// 3. Identify differences and classify drift types
-// 4. Calculate drift severity and risk scores
-// 5. Generate remediation recommendations
-// 6. Store drift events and analysis results
-// 7. Trigger notifications and alerts
-
+// DriftController coordinates drift detection and management
 type DriftController struct {
-	// TODO: Add real controller fields
-	// - config *config.Config
-	// - db *database.Database
-	// - watcher *watcher.KubernetesWatcher
-	// - logger *zap.Logger
-	// - gitClient *git.GitClient
-	// - mcpClient *mcp.MCPClient
-	// - driftProcessor *DriftProcessor
-	// - notificationManager *NotificationManager
-	// - stopCh chan struct{}
-	// - metrics *ControllerMetrics
+	config    *config.Config
+	db        *database.Database
+	logger    *zap.Logger
+	stopCh    chan struct{}
+	isRunning bool
 }
 
-func NewDriftController(cfg *config.Config, db *database.Database, watcher *watcher.KubernetesWatcher, logger *zap.Logger) *DriftController {
-	// TODO: Replace mock implementation with real controller initialization
-	//
-	// Implementation steps:
-	// 1. Initialize Git client for desired state access
-	// 2. Set up MCP client for AI/ML integration
-	// 3. Create drift processor with analysis algorithms
-	// 4. Initialize notification manager
-	// 5. Set up metrics collection
-	// 6. Configure drift detection parameters
-	// 7. Initialize drift event processing pipeline
-	// 8. Set up health monitoring
-
-	return &DriftController{}
+// NewDriftController creates a new drift controller instance
+func NewDriftController(cfg *config.Config, db *database.Database, logger *zap.Logger) *DriftController {
+	return &DriftController{
+		config:  cfg,
+		db:      db,
+		logger:  logger,
+		stopCh:  make(chan struct{}),
+	}
 }
 
-func (c *DriftController) Start(ctx interface{}) error {
-	// TODO: Implement main drift detection loop
-	//
-	// Implementation steps:
-	// 1. Start Kubernetes resource watcher
-	// 2. Start Git repository monitoring
-	// 3. Begin drift detection processing loop
-	// 4. Set up drift event processing pipeline
-	// 5. Initialize drift analysis workers
-	// 6. Start notification system
-	// 7. Begin metrics collection
-	// 8. Set up periodic drift scans
+// Start begins the drift detection process
+func (c *DriftController) Start(ctx context.Context) error {
+	if c.isRunning {
+		c.logger.Warn("DriftController is already running")
+		return nil
+	}
 
+	c.logger.Info("Starting DriftController")
+	c.isRunning = true
+
+	// Start periodic drift analysis
+	go c.runDriftAnalysis(ctx)
+
+	c.logger.Info("DriftController started successfully")
 	return nil
 }
 
+// Stop gracefully stops the drift controller
 func (c *DriftController) Stop() error {
-	// TODO: Implement graceful shutdown
-	// 1. Stop all resource watchers
-	// 2. Stop drift processing workers
-	// 3. Complete in-flight drift analysis
-	// 4. Save final state to database
-	// 5. Close all connections
-	// 6. Stop metrics collection
+	if !c.isRunning {
+		c.logger.Warn("DriftController is not running")
+		return nil
+	}
+
+	c.logger.Info("Stopping DriftController")
+	c.isRunning = false
+	close(c.stopCh)
+
+	c.logger.Info("DriftController stopped successfully")
 	return nil
 }
 
-// TODO: Add the following methods:
+// runDriftAnalysis runs periodic drift analysis
+func (c *DriftController) runDriftAnalysis(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
 
-// detectDrift compares live and desired states to identify drift
-// func (c *DriftController) detectDrift(live, desired *models.KubernetesResource) (*models.DriftEvent, error)
+	c.logger.Info("Starting periodic drift analysis")
 
-// analyzeDrift performs detailed analysis of drift events
-// func (c *DriftController) analyzeDrift(event *models.DriftEvent) (*models.DriftAnalysis, error)
+	for {
+		select {
+		case <-ctx.Done():
+			c.logger.Info("Drift analysis stopped due to context cancellation")
+			return
+		case <-c.stopCh:
+			c.logger.Info("Drift analysis stopped due to controller shutdown")
+			return
+		case <-ticker.C:
+			c.performDriftAnalysis()
+		}
+	}
+}
 
-// remediateDrift attempts to automatically fix drift
-// func (c *DriftController) remediateDrift(event *models.DriftEvent) error
+// performDriftAnalysis performs a single drift analysis cycle
+func (c *DriftController) performDriftAnalysis() {
+	c.logger.Debug("Performing drift analysis")
 
-// processDriftEvent handles the complete drift event lifecycle
-// func (c *DriftController) processDriftEvent(event *models.DriftEvent) error
+	// Get all snapshots for analysis
+	snapshots, err := c.db.GetOptimizedSnapshots("")
+	if err != nil {
+		c.logger.Error("Failed to get snapshots for analysis", zap.Error(err))
+		return
+	}
 
-// calculateDriftScore computes a numerical score for drift severity
-// func (c *DriftController) calculateDriftScore(live, desired *models.KubernetesResource) float64
+	c.logger.Info("Analyzing snapshots", zap.Int("count", len(snapshots)))
 
-// classifyDriftType determines the type of drift detected
-// func (c *DriftController) classifyDriftType(live, desired *models.KubernetesResource) models.DriftType
+	// For now, just log the analysis
+	// In the future, this would compare with Git desired state
+	for _, snapshot := range snapshots {
+		c.logger.Debug("Analyzing snapshot",
+			zap.String("kind", snapshot.Kind),
+			zap.String("namespace", snapshot.Namespace),
+			zap.String("name", snapshot.Name),
+			zap.Int("update_count", len(snapshot.UpdateLog)))
+	}
+}
 
-// getDesiredState retrieves the desired state from Git repository
-// func (c *DriftController) getDesiredState(namespace, name, kind string) (*models.KubernetesResource, error)
+// GetSnapshots retrieves snapshots for a namespace
+func (c *DriftController) GetSnapshots(namespace string) ([]*models.OptimizedResourceSnapshot, error) {
+	return c.db.GetOptimizedSnapshots(namespace)
+}
 
-// validateRemediation validates that remediation was successful
-// func (c *DriftController) validateRemediation(event *models.DriftEvent) error
-
-// getDriftHistory returns historical drift data for analysis
-// func (c *DriftController) getDriftHistory(env string, timeRange time.Duration) ([]*models.DriftEvent, error)
-
-// sendNotification sends drift notifications to configured channels
-// func (c *DriftController) sendNotification(event *models.DriftEvent) error
+// GetSnapshot retrieves a specific snapshot
+func (c *DriftController) GetSnapshot(namespace, kind, name string) (*models.OptimizedResourceSnapshot, error) {
+	return c.db.GetOptimizedSnapshot(namespace, kind, name)
+}
