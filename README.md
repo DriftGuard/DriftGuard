@@ -231,6 +231,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Contact
 
-For questions, feature requests, or contributions, please open an issue in this repository or contact the maintainers.
+For questions, feature requests, or contributions, please open an issue in this repository or contact the [maintainers](https://github.com/DriftGuard/DriftGuard/blob/main/.github/CODEOWNERS).
 
-**Built for DevOps Engineers, by DevOps Engineers**
