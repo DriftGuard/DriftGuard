@@ -8,13 +8,13 @@ server:
 database:
   host: localhost
   port: 27017
-  dbname: driftguard
+  dbname: DriftGuard
   user: ""
 
 kubernetes:
   config_path: "/Users/arpitsrivastava/.kube/config"
   context: ""
-  namespaces: ["DriftGuard"]
+  namespaces: ["driftguard"]
   resources: [
     "deployments",     # Application deployments
     "services",        # Network services
@@ -27,30 +27,26 @@ kubernetes:
     # "networkpolicies"        # Commented out - networking
   ]
   labels: {}
-  enable_snapshots: true
-  snapshot_interval: 5m
-  skip_system_namespaces: true
-  skip_frequent_pods: true
+  # enable_snapshots: true
+  # snapshot_interval: 5m
+  # skip_system_namespaces: true
+  # skip_frequent_pods: true
 
 git:
   default_branch: main
   clone_timeout: 5m
   pull_timeout: 2m
 
-mcp:
-  endpoint: localhost:9000
-  timeout: 30s
-  retries: 3
+# mcp:
+#   endpoint: localhost:9000
+#   timeout: 30s
+#   retries: 3
 
 environments:
   - name: development
     description: Development environment
     labels:
       env: dev
-    git_repo:
-      url: "https://github.com/example/k8s-configs"
-      branch: main
-      path: k8s/dev
     k8s_context: dev-cluster
 
 logging:

@@ -1,8 +1,10 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/DriftGuard/core/internal/config"
@@ -13,40 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// TODO: HTTP API Server Implementation
-//
-// PHASE 2 PRIORITY 5: Implement REST API server with Gin framework
-//
-// Current Status: Mock implementation - blocks forever
-// Next Steps:
-// 1. Add Gin framework dependency: go get github.com/gin-gonic/gin
-// 2. Implement real HTTP server with proper routing
-// 3. Create REST API endpoints for all operations
-// 4. Add authentication and authorization
-// 5. Implement request validation and error handling
-// 6. Add API documentation with Swagger
-// 7. Implement rate limiting and security headers
-// 8. Add health checks and monitoring endpoints
-//
-// Required API Endpoints to Implement:
-// - GET /api/v1/health - Health check
-// - GET /api/v1/snapshots - List configuration snapshots
-// - GET /api/v1/snapshots/{id} - Get specific snapshot
-// - GET /api/v1/drifts - List drift events
-// - GET /api/v1/drifts/{id} - Get specific drift event
-// - POST /api/v1/drifts/{id}/remediate - Remediate drift
-// - GET /api/v1/environments - List environments
-// - GET /api/v1/statistics - Get drift statistics
-// - GET /api/v1/metrics - Prometheus metrics
-//
-// API Features to Implement:
-// - Pagination for list endpoints
-// - Filtering and sorting
-// - Real-time updates with WebSocket
-// - API versioning
-// - Request/response logging
-// - CORS configuration
-
+// Server represents the HTTP server
 type Server struct {
 	router     *gin.Engine
 	config     config.ServerConfig
@@ -57,6 +26,7 @@ type Server struct {
 	metrics    *metrics.Metrics
 }
 
+// New creates a new HTTP server instance
 func New(cfg config.ServerConfig, controller *controller.DriftController, logger *zap.Logger) *Server {
 	// Initialize Gin router
 	gin.SetMode(gin.ReleaseMode)
@@ -84,6 +54,7 @@ func New(cfg config.ServerConfig, controller *controller.DriftController, logger
 	return server
 }
 
+// Start starts the HTTP server
 func (s *Server) Start(port int) error {
 	s.logger.Info("Starting HTTP server", zap.Int("port", port))
 
@@ -105,14 +76,11 @@ func (s *Server) Start(port int) error {
 	return nil
 }
 
+// Shutdown gracefully shuts down the HTTP server
 func (s *Server) Shutdown(ctx interface{}) error {
-	// TODO: Implement graceful server shutdown
-	// 1. Stop accepting new connections
-	// 2. Wait for in-flight requests to complete
-	// 3. Close all active connections
-	// 4. Shutdown HTTP server gracefully
-	// 5. Clean up resources
-	// 6. Log shutdown completion
+	if s.server != nil {
+		return s.server.Shutdown(ctx.(context.Context))
+	}
 	return nil
 }
 
@@ -214,36 +182,80 @@ func (s *Server) getMetrics(c *gin.Context) {
 }
 
 func (s *Server) getSnapshots(c *gin.Context) {
-	// TODO: Implement snapshot listing
-	c.JSON(http.StatusOK, gin.H{"message": "Snapshots endpoint - not implemented yet"})
+	namespace := c.Query("namespace")
+
+	// Get snapshots from database
+	snapshots, err := s.controller.GetSnapshots(namespace)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to retrieve snapshots",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"snapshots": snapshots,
+		"count":     len(snapshots),
+	})
 }
 
 func (s *Server) getSnapshot(c *gin.Context) {
-	// TODO: Implement snapshot retrieval
-	c.JSON(http.StatusOK, gin.H{"message": "Snapshot endpoint - not implemented yet"})
+	id := c.Param("id")
+
+	// Parse the ID to extract namespace, kind, and name
+	// For now, we'll use a simple format: namespace:kind:name
+	parts := strings.Split(id, ":")
+	if len(parts) != 3 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid snapshot ID format. Expected: namespace:kind:name",
+		})
+		return
+	}
+
+	namespace, kind, name := parts[0], parts[1], parts[2]
+
+	snapshot, err := s.controller.GetSnapshot(namespace, kind, name)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error":   "Snapshot not found",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, snapshot)
 }
 
 func (s *Server) getDriftEvents(c *gin.Context) {
-	// TODO: Implement drift events listing
-	c.JSON(http.StatusOK, gin.H{"message": "Drift events endpoint - not implemented yet"})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Drift events endpoint - not implemented yet",
+		"events":  []interface{}{},
+	})
 }
 
 func (s *Server) getDriftEvent(c *gin.Context) {
-	// TODO: Implement drift event retrieval
-	c.JSON(http.StatusOK, gin.H{"message": "Drift event endpoint - not implemented yet"})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Drift event endpoint - not implemented yet",
+	})
 }
 
 func (s *Server) remediateDrift(c *gin.Context) {
-	// TODO: Implement drift remediation
-	c.JSON(http.StatusOK, gin.H{"message": "Drift remediation endpoint - not implemented yet"})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Drift remediation endpoint - not implemented yet",
+	})
 }
 
 func (s *Server) getEnvironments(c *gin.Context) {
-	// TODO: Implement environments listing
-	c.JSON(http.StatusOK, gin.H{"message": "Environments endpoint - not implemented yet"})
+	c.JSON(http.StatusOK, gin.H{
+		"message":      "Environments endpoint - not implemented yet",
+		"environments": []interface{}{},
+	})
 }
 
 func (s *Server) getStatistics(c *gin.Context) {
-	// TODO: Implement statistics
-	c.JSON(http.StatusOK, gin.H{"message": "Statistics endpoint - not implemented yet"})
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "Statistics endpoint - not implemented yet",
+		"statistics": map[string]interface{}{},
+	})
 }
