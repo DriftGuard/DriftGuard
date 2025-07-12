@@ -214,4 +214,4 @@ It empowers teams to:
 * Maintain a golden state.
 * Move faster, with confidence.
 
-Ready to make drift a thing of the past? Welcome to **DriftGuard**.
+Ready to make drift a thing of the past? Welcome to **[DriftGuard](https://github.com/Arpit529Srivastava/DriftGuard/blob/main/README.md)**.
