@@ -19,6 +19,14 @@ DriftGuard is an intelligent GitOps configuration drift detection platform that 
 - **Metrics & Monitoring**: Prometheus metrics and health checks
 - **Enhanced Logging**: Detailed logging with emojis for drift detection and resolution events
 
+---
+
+## Learn More About DriftGuard
+
+Want to dive deeper into the configuration drift crisis and understand how DriftGuard solves real-world infrastructure challenges? Check out our comprehensive guide:
+
+**[Learn More About DriftGuard](ABOUT.md)** - Discover the configuration drift crisis, understand GitOps vs InfraOps, explore real-world examples, and learn about DriftGuard's business value and architecture.
+
 ## 🏗️ Architecture
 
 ```
@@ -547,11 +555,6 @@ spec:
           secretName: driftguard-kubeconfig
 ```
 
-## Learn More About DriftGuard
-
-Want to dive deeper into the configuration drift crisis and understand how DriftGuard solves real-world infrastructure challenges? Check out our comprehensive guide:
-
-**[Learn More About DriftGuard](ABOUT.md)** - Discover the configuration drift crisis, understand GitOps vs InfraOps, explore real-world examples, and learn about DriftGuard's business value and architecture.
 
 ## Contributing
 
