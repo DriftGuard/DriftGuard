@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"runtime/debug"
 	"syscall"
 	"time"
@@ -36,7 +37,30 @@ var (
 	showVersion     = flag.Bool("version", false, "Show version information")
 )
 
+func printBanner() {
+	blue := "\033[1;34m"
+	cyan := "\033[1;36m"
+	green := "\033[1;32m"
+	reset := "\033[0m"
+	banner := `
+ ____       _  __ _    ____                     _ 
+|  _ \ _ __(_)/ _| |_ / ___|_   _  __ _ _ __ __| |
+| | | | '__| | |_| __| |  _| | | |/ _` + "`" + ` | '__/ _` + "`" + ` |
+| |_| | |  | |  _| |_| |_| | |_| | (_| | | | (_| |
+|____/|_|  |_|_|  \__|\____|\__,_|\__,_|_|  \__,_|
+`
+	fmt.Println(blue + banner + reset)
+	fmt.Println(cyan + "DriftGuard - Intelligent GitOps Drift Detection" + reset)
+	fmt.Printf("%sVersion:%s   %s\n", green, reset, Version)
+	fmt.Printf("%sBuild:%s     %s\n", green, reset, BuildDate)
+	fmt.Printf("%sCommit:%s    %s\n", green, reset, GitCommit)
+	fmt.Printf("%sGo:%s         %s\n", green, reset, runtime.Version())
+	fmt.Printf("%sOS/Arch:%s    %s/%s\n", green, reset, runtime.GOOS, runtime.GOARCH)
+	fmt.Println()
+}
+
 func main() {
+	printBanner()
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Fprintf(os.Stderr, "PANIC: %v\n%s\n", r, debug.Stack())
