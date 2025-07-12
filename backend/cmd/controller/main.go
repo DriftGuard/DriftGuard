@@ -20,7 +20,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// Application version information
 const (
 	Version   = "0.1.0"
 	BuildDate = "2024-01-01"
@@ -47,7 +46,6 @@ func main() {
 
 	flag.Parse()
 
-	// Show version and exit if requested
 	if *showVersion {
 		fmt.Printf("DriftGuard Controller v%s\n", Version)
 		fmt.Printf("Build Date: %s\n", BuildDate)
@@ -68,12 +66,10 @@ func main() {
 		zap.String("build_date", BuildDate),
 		zap.String("git_commit", GitCommit))
 
-	// Initialize metrics
 	metrics := metrics.NewMetrics(logger)
 	metrics.SetAppStartTime()
 	metrics.SetAppVersion(Version, GitCommit, BuildDate)
 
-	// Load configuration
 	logger.Info("Loading configuration", zap.String("config_file", *configFile))
 	cfg, err := config.Load(*configFile)
 	if err != nil {
@@ -83,10 +79,8 @@ func main() {
 	}
 	logger.Info("Configuration loaded successfully")
 
-	// Initialize lifecycle manager
 	lifecycleMgr := lifecycle.NewLifecycleManager(logger)
 
-	// Initialize database
 	logger.Info("Initializing database")
 	db, err := database.New(cfg.Database)
 	if err != nil {
@@ -97,18 +91,19 @@ func main() {
 	defer db.Close()
 	logger.Info("Database initialized successfully")
 
-
-	// Initialize drift controller
 	logger.Info("Initializing drift controller")
-	driftController := controller.NewDriftController(cfg, db, logger)
+	driftController, err := controller.NewDriftController(cfg, db, logger)
+	if err != nil {
+		logger.Error("Failed to initialize drift controller", zap.Error(err))
+		fmt.Fprintf(os.Stderr, "Failed to initialize drift controller: %v\n", err)
+		os.Exit(1)
+	}
 	logger.Info("Drift controller initialized successfully")
 
-	// Initialize HTTP server
 	logger.Info("Initializing HTTP server")
 	httpServer := server.New(cfg.Server, driftController, logger)
 	logger.Info("HTTP server initialized successfully")
 
-	// Register components with lifecycle manager
 	lifecycleMgr.RegisterComponent(&lifecycleComponent{
 		name:   "database",
 		start:  func(ctx context.Context) error { return nil },
@@ -123,11 +118,16 @@ func main() {
 		health: func(ctx context.Context) error { return nil },
 	})
 
-	// Create context for graceful shutdown
+	lifecycleMgr.RegisterComponent(&lifecycleComponent{
+		name:   "http-server",
+		start:  func(ctx context.Context) error { return nil },
+		stop:   func(ctx context.Context) error { return httpServer.Shutdown(ctx) },
+		health: func(ctx context.Context) error { return nil },
+	})
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Start application lifecycle
 	logger.Info("Starting application lifecycle")
 	if err := lifecycleMgr.Start(ctx); err != nil {
 		logger.Error("Failed to start application lifecycle", zap.Error(err))
@@ -135,7 +135,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Start HTTP server
 	go func() {
 		logger.Info("Starting HTTP server", zap.Int("port", *port))
 		if err := httpServer.Start(*port); err != nil && err != http.ErrServerClosed {
@@ -145,7 +144,6 @@ func main() {
 		}
 	}()
 
-	// Start metrics update goroutine
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
@@ -164,24 +162,20 @@ func main() {
 		zap.Int("port", *port),
 		zap.Duration("uptime", lifecycleMgr.GetUptime()))
 
-	// Wait for interrupt signal
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	<-sigCh
 
 	logger.Info("Shutting down DriftGuard Controller...")
 
-	// Graceful shutdown
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
-	// Stop lifecycle manager
 	if err := lifecycleMgr.Stop(shutdownCtx); err != nil {
 		logger.Error("Error during lifecycle shutdown", zap.Error(err))
 		fmt.Fprintf(os.Stderr, "Error during lifecycle shutdown: %v\n", err)
 	}
 
-	// Shutdown HTTP server
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		logger.Error("Error during server shutdown", zap.Error(err))
 		fmt.Fprintf(os.Stderr, "Error during server shutdown: %v\n", err)
@@ -190,7 +184,6 @@ func main() {
 	logger.Info("DriftGuard Controller stopped successfully")
 }
 
-// lifecycleComponent implements the lifecycle.Component interface
 type lifecycleComponent struct {
 	name   string
 	start  func(context.Context) error

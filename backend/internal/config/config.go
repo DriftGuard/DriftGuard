@@ -9,7 +9,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config represents the main application configuration
 type Config struct {
 	Server       ServerConfig         `yaml:"server"`
 	Database     DatabaseConfig       `yaml:"database"`
@@ -19,7 +18,6 @@ type Config struct {
 	Logging      LoggingConfig        `yaml:"logging"`
 }
 
-// ServerConfig represents HTTP server configuration
 type ServerConfig struct {
 	Port            int           `yaml:"port"`
 	ReadTimeout     time.Duration `yaml:"read_timeout"`
@@ -28,7 +26,6 @@ type ServerConfig struct {
 	ShutdownTimeout time.Duration `yaml:"shutdown_timeout"`
 }
 
-// DatabaseConfig represents database configuration
 type DatabaseConfig struct {
 	Host     string `yaml:"host"`
 	Port     int    `yaml:"port"`
@@ -37,34 +34,27 @@ type DatabaseConfig struct {
 	Password string `yaml:"password"`
 }
 
-// KubernetesConfig represents Kubernetes client configuration
 type KubernetesConfig struct {
-	ConfigPath       string            `yaml:"config_path"`
-	Context          string            `yaml:"context"`
-	Namespaces       []string          `yaml:"namespaces"`
-	Resources        []string          `yaml:"resources"`
-	Labels           map[string]string `yaml:"labels"`
-	EnableSnapshots  bool              `yaml:"enable_snapshots"`
-	SnapshotInterval time.Duration     `yaml:"snapshot_interval"`
-	SkipSystemNS     bool              `yaml:"skip_system_namespaces"`
-	SkipFrequentPods bool              `yaml:"skip_frequent_pods"`
+	ConfigPath string            `yaml:"config_path"`
+	Context    string            `yaml:"context"`
+	Namespaces []string          `yaml:"namespaces"`
+	Resources  []string          `yaml:"resources"`
+	Labels     map[string]string `yaml:"labels"`
 }
 
-// GitConfig represents Git repository configuration
 type GitConfig struct {
+	RepositoryURL string        `yaml:"repository_url"`
 	DefaultBranch string        `yaml:"default_branch"`
 	CloneTimeout  time.Duration `yaml:"clone_timeout"`
 	PullTimeout   time.Duration `yaml:"pull_timeout"`
 }
 
-// LoggingConfig represents logging configuration
 type LoggingConfig struct {
 	Level      string `yaml:"level"`
 	Format     string `yaml:"format"`
 	OutputPath string `yaml:"output_path"`
 }
 
-// Load loads configuration from a YAML file
 func Load(configPath string) (*Config, error) {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
@@ -76,10 +66,8 @@ func Load(configPath string) (*Config, error) {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
-	// Set defaults
 	config.setDefaults()
 
-	// Validate configuration
 	if err := config.validate(); err != nil {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
@@ -87,9 +75,7 @@ func Load(configPath string) (*Config, error) {
 	return &config, nil
 }
 
-// setDefaults sets default values for configuration fields
 func (c *Config) setDefaults() {
-	// Server defaults
 	if c.Server.Port == 0 {
 		c.Server.Port = 8080
 	}
@@ -106,12 +92,10 @@ func (c *Config) setDefaults() {
 		c.Server.ShutdownTimeout = 30 * time.Second
 	}
 
-	// Database defaults - MongoDB
 	if c.Database.Port == 0 {
 		c.Database.Port = 27017
 	}
 
-	// Kubernetes defaults
 	if c.Kubernetes.ConfigPath == "" {
 		c.Kubernetes.ConfigPath = os.Getenv("KUBECONFIG")
 	}
@@ -119,7 +103,6 @@ func (c *Config) setDefaults() {
 		c.Kubernetes.Resources = []string{"deployments", "services", "configmaps", "secrets"}
 	}
 
-	// Git defaults
 	if c.Git.DefaultBranch == "" {
 		c.Git.DefaultBranch = "main"
 	}
@@ -130,7 +113,6 @@ func (c *Config) setDefaults() {
 		c.Git.PullTimeout = 2 * time.Minute
 	}
 
-	// Logging defaults
 	if c.Logging.Level == "" {
 		c.Logging.Level = "info"
 	}
@@ -139,7 +121,6 @@ func (c *Config) setDefaults() {
 	}
 }
 
-// validate validates the configuration
 func (c *Config) validate() error {
 	if c.Database.Host == "" {
 		return fmt.Errorf("database host is required")
@@ -151,7 +132,6 @@ func (c *Config) validate() error {
 	return nil
 }
 
-// GetDatabaseURL returns the database connection URL
 func (c *Config) GetDatabaseURL() string {
 	if c.Database.User != "" && c.Database.Password != "" {
 		return fmt.Sprintf("mongodb://%s:%s@%s:%d/%s",
@@ -169,7 +149,6 @@ func (c *Config) GetDatabaseURL() string {
 	)
 }
 
-// GetEnvironmentByName returns an environment by name
 func (c *Config) GetEnvironmentByName(name string) (*models.Environment, error) {
 	for _, env := range c.Environments {
 		if env.Name == name {

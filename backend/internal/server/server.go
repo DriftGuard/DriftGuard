@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/DriftGuard/core/internal/config"
@@ -15,7 +14,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// Server represents the HTTP server
 type Server struct {
 	router     *gin.Engine
 	config     config.ServerConfig
@@ -26,13 +24,10 @@ type Server struct {
 	metrics    *metrics.Metrics
 }
 
-// New creates a new HTTP server instance
 func New(cfg config.ServerConfig, controller *controller.DriftController, logger *zap.Logger) *Server {
-	// Initialize Gin router
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 
-	// Initialize health service and metrics
 	healthSvc := health.NewHealthService(logger)
 	metrics := metrics.NewMetrics(logger)
 
@@ -45,20 +40,15 @@ func New(cfg config.ServerConfig, controller *controller.DriftController, logger
 		metrics:    metrics,
 	}
 
-	// Set up middleware
 	server.setupMiddleware()
-
-	// Set up routes
 	server.setupRoutes()
 
 	return server
 }
 
-// Start starts the HTTP server
 func (s *Server) Start(port int) error {
 	s.logger.Info("Starting HTTP server", zap.Int("port", port))
 
-	// Create HTTP server
 	s.server = &http.Server{
 		Addr:         fmt.Sprintf(":%d", port),
 		Handler:      s.router,
@@ -67,7 +57,6 @@ func (s *Server) Start(port int) error {
 		IdleTimeout:  s.config.IdleTimeout,
 	}
 
-	// Start server
 	if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		s.logger.Error("Failed to start HTTP server", zap.Error(err))
 		return err
@@ -76,7 +65,6 @@ func (s *Server) Start(port int) error {
 	return nil
 }
 
-// Shutdown gracefully shuts down the HTTP server
 func (s *Server) Shutdown(ctx interface{}) error {
 	if s.server != nil {
 		return s.server.Shutdown(ctx.(context.Context))
@@ -84,42 +72,29 @@ func (s *Server) Shutdown(ctx interface{}) error {
 	return nil
 }
 
-// setupMiddleware configures all middleware
 func (s *Server) setupMiddleware() {
-	// Recovery middleware
 	s.router.Use(gin.Recovery())
-
-	// Logging middleware
 	s.router.Use(s.loggingMiddleware())
-
-	// Metrics middleware
 	s.router.Use(s.metricsMiddleware())
 }
 
-// setupRoutes configures all API routes
 func (s *Server) setupRoutes() {
-	// Health check endpoints
 	s.router.GET("/health", s.getHealth)
 	s.router.GET("/ready", s.getReady)
-
-	// Metrics endpoint
 	s.router.GET("/metrics", s.getMetrics)
 
-	// API v1 routes
 	v1 := s.router.Group("/api/v1")
 	{
 		v1.GET("/health", s.getHealth)
-		v1.GET("/snapshots", s.getSnapshots)
-		v1.GET("/snapshots/:id", s.getSnapshot)
-		v1.GET("/drifts", s.getDriftEvents)
-		v1.GET("/drifts/:id", s.getDriftEvent)
-		v1.POST("/drifts/:id/remediate", s.remediateDrift)
-		v1.GET("/environments", s.getEnvironments)
+		v1.GET("/drift-records", s.getDriftRecords)
+		v1.GET("/drift-records/:resourceId", s.getDriftRecord)
+		v1.GET("/drift-records/active", s.getActiveDrifts)
+		v1.GET("/drift-records/resolved", s.getResolvedDrifts)
 		v1.GET("/statistics", s.getStatistics)
+		v1.POST("/analyze", s.triggerAnalysis)
 	}
 }
 
-// loggingMiddleware logs all requests
 func (s *Server) loggingMiddleware() gin.HandlerFunc {
 	return gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
 		s.logger.Info("HTTP Request",
@@ -134,21 +109,16 @@ func (s *Server) loggingMiddleware() gin.HandlerFunc {
 	})
 }
 
-// metricsMiddleware records metrics for all requests
 func (s *Server) metricsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		c.Next()
-		_ = time.Since(start) // Duration captured by metrics middleware
+		_ = time.Since(start)
 
-		// Record metrics using the HTTP middleware
 		s.metrics.HTTPMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// This will be handled by the metrics middleware
 		})).ServeHTTP(c.Writer, c.Request)
 	}
 }
-
-// API handler methods
 
 func (s *Server) getHealth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
@@ -159,7 +129,6 @@ func (s *Server) getHealth(c *gin.Context) {
 }
 
 func (s *Server) getReady(c *gin.Context) {
-	// Check if all components are ready
 	status, message := s.healthSvc.GetOverallStatus(c.Request.Context())
 	if status != health.StatusHealthy {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
@@ -181,81 +150,102 @@ func (s *Server) getMetrics(c *gin.Context) {
 	s.metrics.Handler().ServeHTTP(c.Writer, c.Request)
 }
 
-func (s *Server) getSnapshots(c *gin.Context) {
+func (s *Server) getDriftRecords(c *gin.Context) {
 	namespace := c.Query("namespace")
+	var driftDetected *bool
 
-	// Get snapshots from database
-	snapshots, err := s.controller.GetSnapshots(namespace)
+	if driftStr := c.Query("drift_detected"); driftStr != "" {
+		detected := driftStr == "true"
+		driftDetected = &detected
+	}
+
+	records, err := s.controller.GetDriftRecords(namespace, driftDetected)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to retrieve snapshots",
+			"error":   "Failed to retrieve drift records",
 			"message": err.Error(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"snapshots": snapshots,
-		"count":     len(snapshots),
+		"drift_records": records,
+		"count":         len(records),
 	})
 }
 
-func (s *Server) getSnapshot(c *gin.Context) {
-	id := c.Param("id")
+func (s *Server) getDriftRecord(c *gin.Context) {
+	resourceID := c.Param("resourceId")
 
-	// Parse the ID to extract namespace, kind, and name
-	// For now, we'll use a simple format: namespace:kind:name
-	parts := strings.Split(id, ":")
-	if len(parts) != 3 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid snapshot ID format. Expected: namespace:kind:name",
-		})
-		return
-	}
-
-	namespace, kind, name := parts[0], parts[1], parts[2]
-
-	snapshot, err := s.controller.GetSnapshot(namespace, kind, name)
+	record, err := s.controller.GetDriftRecord(resourceID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
-			"error":   "Snapshot not found",
+			"error":   "Drift record not found",
 			"message": err.Error(),
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, snapshot)
+	c.JSON(http.StatusOK, record)
 }
 
-func (s *Server) getDriftEvents(c *gin.Context) {
+func (s *Server) getActiveDrifts(c *gin.Context) {
+	records, err := s.controller.GetActiveDrifts()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to retrieve active drift records",
+			"message": err.Error(),
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Drift events endpoint - not implemented yet",
-		"events":  []interface{}{},
+		"drift_records": records,
+		"count":         len(records),
+		"status":        "active",
 	})
 }
 
-func (s *Server) getDriftEvent(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Drift event endpoint - not implemented yet",
-	})
-}
+func (s *Server) getResolvedDrifts(c *gin.Context) {
+	records, err := s.controller.GetResolvedDrifts()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to retrieve resolved drift records",
+			"message": err.Error(),
+		})
+		return
+	}
 
-func (s *Server) remediateDrift(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Drift remediation endpoint - not implemented yet",
-	})
-}
-
-func (s *Server) getEnvironments(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"message":      "Environments endpoint - not implemented yet",
-		"environments": []interface{}{},
+		"drift_records": records,
+		"count":         len(records),
+		"status":        "resolved",
 	})
 }
 
 func (s *Server) getStatistics(c *gin.Context) {
+	statistics, err := s.controller.GetDriftStatistics()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to retrieve statistics",
+			"message": err.Error(),
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"message":    "Statistics endpoint - not implemented yet",
-		"statistics": map[string]interface{}{},
+		"statistics": statistics,
+	})
+}
+
+func (s *Server) triggerAnalysis(c *gin.Context) {
+	go func() {
+		s.logger.Info("Manual drift analysis triggered via API")
+		s.controller.TriggerManualAnalysis()
+	}()
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Drift analysis triggered successfully",
+		"status":  "started",
 	})
 }
