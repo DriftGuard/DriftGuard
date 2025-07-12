@@ -547,7 +547,13 @@ spec:
           secretName: driftguard-kubeconfig
 ```
 
-##  Contributing
+## Learn More About DriftGuard
+
+Want to dive deeper into the configuration drift crisis and understand how DriftGuard solves real-world infrastructure challenges? Check out our comprehensive guide:
+
+**[Learn More About DriftGuard](ABOUT.md)** - Discover the configuration drift crisis, understand GitOps vs InfraOps, explore real-world examples, and learn about DriftGuard's business value and architecture.
+
+## Contributing
 
 We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
 
