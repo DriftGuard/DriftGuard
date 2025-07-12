@@ -8,16 +8,16 @@ DriftGuard is an intelligent GitOps configuration drift detection platform that 
 
 ## 🚀 Key Features
 
-- **🔍 Enhanced Drift Detection**: Continuously monitors Kubernetes resources with intelligent drift classification
-- **✅ Drift Resolution Detection**: Automatically detects when drift is resolved and configuration matches Git again
-- **📊 State Management**: Tracks drift status (active/resolved/none) with timestamps and resolution messages
-- **🔗 Git Integration**: Compares live state against Git-stored manifests with hash-based state tracking
-- **🏷️ Intelligent Classification**: Automatically classifies drift types (Scaling, VersionChange, ResourceChange, etc.)
-- **⚠️ Severity Assessment**: Assigns severity levels (low, medium, high) to detected drifts
-- **💾 MongoDB Storage**: Persistent storage of drift records with enhanced state tracking
-- **🌐 REST API**: Comprehensive HTTP endpoints for querying drift records, status filtering, and statistics
-- **📈 Metrics & Monitoring**: Prometheus metrics and health checks
-- **📝 Enhanced Logging**: Detailed logging with emojis for drift detection and resolution events
+- **Enhanced Drift Detection**: Continuously monitors Kubernetes resources with intelligent drift classification
+- **Drift Resolution Detection**: Automatically detects when drift is resolved and configuration matches Git again
+- **State Management**: Tracks drift status (active/resolved/none) with timestamps and resolution messages
+- **Git Integration**: Compares live state against Git-stored manifests with hash-based state tracking
+- **Intelligent Classification**: Automatically classifies drift types (Scaling, VersionChange, ResourceChange, etc.)
+- **Severity Assessment**: Assigns severity levels (low, medium, high) to detected drifts
+- **MongoDB Storage**: Persistent storage of drift records with enhanced state tracking
+- **REST API**: Comprehensive HTTP endpoints for querying drift records, status filtering, and statistics
+- **Metrics & Monitoring**: Prometheus metrics and health checks
+- **Enhanced Logging**: Detailed logging with emojis for drift detection and resolution events
 
 ## 🏗️ Architecture
 
@@ -547,15 +547,15 @@ spec:
           secretName: driftguard-kubeconfig
 ```
 
-## 🤝 Contributing
+##  Contributing
 
 We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details.
 
-## 📞 Support
+## Support
 
 For questions, feature requests, or contributions, please open an issue in this repository.
 
