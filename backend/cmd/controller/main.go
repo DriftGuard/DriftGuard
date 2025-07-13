@@ -22,9 +22,9 @@ import (
 )
 
 const (
-	Version   = "0.1.0"
-	BuildDate = "2024-01-01"
-	GitCommit = "development"
+	Version   = "v0.1.0"
+	BuildDate = "2025-07-14"
+	GitCommit = "Production"
 )
 
 var (
