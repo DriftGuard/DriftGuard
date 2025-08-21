@@ -1,0 +1,65 @@
+.venv/
+tests/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.pyd
+*.so
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+
+# Virtual environments
+venv/
+env/
+.conda/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# Test & coverage
+.tox/
+.nox/
+.coverage
+.coverage.*
+.pytest_cache/
+.hypothesis/
+.cache/
+
+# Type checkers
+.mypy_cache/
+.pyre/
+.pytype/
+dmypy.json
+.dmypy.json
+
+# Editors/IDEs
+.vscode/
+.idea/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# LangGraph persistence (if switching to file/SQLite later)
+checkpoints/
+*.sqlite
+*.sqlite3
+state.db
