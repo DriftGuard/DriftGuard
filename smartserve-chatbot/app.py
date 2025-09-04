@@ -112,5 +112,54 @@ async def DriftStatus():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+@app.post("/test-slack")
+async def TestSlack(request: Request):
+    """
+    Test endpoint for Slack integration.
+    Sends a test message to Slack to verify webhook configuration.
+    """
+    from src.tools.slack_tool import send_drift_report_to_slack
+    
+    data = await request.json()
+    test_message = data.get("message", "🧪 Test message from DriftGuard chatbot")
+    
+    try:
+        result = send_drift_report_to_slack(test_message)
+        return {
+            "status": "success" if "✅" in result else "error",
+            "message": result,
+            "test_message": test_message
+        }
+    except Exception as e:
+        return {"status": "error", "message": f"Slack test failed: {str(e)}"}
+
+@app.post("/send-drift-alert")
+async def SendDriftAlert(request: Request):
+    """
+    Send a drift alert to Slack with specific details.
+    """
+    from src.tools.slack_tool import send_drift_alert_to_slack
+    
+    data = await request.json()
+    alert_type = data.get("alert_type", "Configuration Drift")
+    resource_name = data.get("resource_name", "Unknown Resource")
+    namespace = data.get("namespace", "default")
+    details = data.get("details", "No details provided")
+    
+    try:
+        result = send_drift_alert_to_slack(alert_type, resource_name, namespace, details)
+        return {
+            "status": "success" if "✅" in result else "error",
+            "message": result,
+            "alert_data": {
+                "alert_type": alert_type,
+                "resource_name": resource_name,
+                "namespace": namespace,
+                "details": details
+            }
+        }
+    except Exception as e:
+        return {"status": "error", "message": f"Failed to send drift alert: {str(e)}"}
+
 if __name__=="__main__":
     uvicorn.run("app:app",host="0.0.0.0",port=8000,reload=True)

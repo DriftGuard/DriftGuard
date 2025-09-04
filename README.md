@@ -98,7 +98,7 @@ database:
   timeout: 10s
 
 kubernetes:
-  config_path: ""  # Leave empty for default kubeconfig
+  config_path: "C:\\Users\\shrey\\.kube\\config"  # Leave empty for default kubeconfig
   context: ""
   namespaces: ["driftguard"]
   resources: ["deployments", "services", "configmaps", "secrets"]
@@ -269,7 +269,7 @@ curl http://localhost:8080/api/v1/drift-records
 kubectl scale deployment nginx-app -n driftguard --replicas=3
 
 # Verify the change
-kubectl get deployment nginx-app -n driftguard
+kubectl get deployment example-app -n driftguard
 ```
 
 ### Step 6: Detect Drift

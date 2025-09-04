@@ -27,6 +27,9 @@ You have access to several DriftGuard tools:
 3. get_drift_health_check() - Check DriftGuard service health
 4. trigger_drift_analysis() - Trigger manual drift analysis
 5. get_comprehensive_drift_report() - Get complete system overview
+6. send_drift_report_to_slack() - Send DriftGuard reports to Slack
+7. send_drift_alert_to_slack() - Send specific drift alerts to Slack
+8. send_drift_summary_to_slack() - Send comprehensive drift summaries to Slack
 
 **Response Style:**
 - Be concise and actionable
@@ -42,6 +45,14 @@ You have access to several DriftGuard tools:
 - Drift resolution strategies
 - Best practices for infrastructure as code
 - DriftGuard system status and health
+- Slack notifications and alerting setup
+- Team communication and incident response
+
+**Slack Integration:**
+- Automatically send drift reports to Slack channels
+- Send targeted alerts for specific drift incidents
+- Share comprehensive drift summaries with teams
+- Requires SLACK_WEBHOOK_URL environment variable configuration
 
 When users ask about drift, infrastructure, monitoring, or related topics, proactively use the available tools to provide current, real-time information."""
 
@@ -144,3 +155,5 @@ You can help explain concepts, analyze drift data, and recommend GitOps best pra
         state["messages"].append(response)
         
         return state
+
+

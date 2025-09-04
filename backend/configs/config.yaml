@@ -12,19 +12,20 @@ database:
   user: ""
 
 kubernetes:
-  config_path: "/Users/arpitsrivastava/.kube/config"
-  context: ""
+  config_path: "C:/Users/shrey/.kube/config"
+  context: "docker-desktop"
   namespaces: ["driftguard"]
-  resources: [
-    "deployments",
-    "services",
-    "configmaps",
-    "secrets"
-  ]
+  resources:
+    - deployments
+    - services
+    - configmaps
+    - secrets
   labels: {}
 
 git:
-  repository_url: "file:///Users/arpitsrivastava/Desktop/DriftGuard/dummy-k8s-repo"
+  # Use file:// URL for a local Windows path and forward slashes
+  repository_url: "file:///E:/DriftGuard/DriftGuard/dummy-k8s-repo"
+  # Ensure this branch actually exists in the repo
   default_branch: main
   clone_timeout: 5m
   pull_timeout: 2m
@@ -39,4 +40,4 @@ environments:
 logging:
   level: info
   format: json
-  output_path: "" 
+  output_path: ""

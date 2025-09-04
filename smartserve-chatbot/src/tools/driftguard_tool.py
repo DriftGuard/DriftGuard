@@ -200,6 +200,9 @@ def get_comprehensive_drift_report() -> str:
 - Review resolved drifts to prevent recurrence
 """
 
+# Import Slack tools
+from .slack_tool import slack_tools
+
 # Export all tools for easy import
 drift_tools = [
     get_drift_statistics,
@@ -207,4 +210,4 @@ drift_tools = [
     get_drift_health_check,
     trigger_drift_analysis,
     get_comprehensive_drift_report
-]
+] + slack_tools
