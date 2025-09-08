@@ -16,7 +16,7 @@ jobs:
     if: github.event.action == 'opened'
     steps:
       - name: Welcome new contributors
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const issue = context.payload.issue;
@@ -38,7 +38,7 @@ jobs:
     if: github.event.action == 'opened' || github.event.action == 'edited'
     steps:
       - name: Check for stale issues
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             // This would typically be handled by GitHub's built-in stale issue management
