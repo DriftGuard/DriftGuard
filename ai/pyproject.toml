@@ -10,6 +10,6 @@ dependencies = [
     "langchain-community>=0.3.27",
     "langchain-core>=0.3.74",
     "langchain-openai>=0.3.29",
-    "langgraph>=0.6.4",
+    "langgraph>=1.1.6",
     "uvicorn>=0.35.0",
 ]
