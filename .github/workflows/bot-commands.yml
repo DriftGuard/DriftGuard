@@ -20,7 +20,7 @@ jobs:
     if: github.event_name == 'issue_comment' && github.event.issue.pull_request == null
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Process issue commands
         uses: actions/github-script@v9
@@ -191,7 +191,7 @@ jobs:
     if: github.event_name == 'issue_comment' && github.event.issue.pull_request != null
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Process PR commands
         uses: actions/github-script@v9
@@ -469,7 +469,7 @@ jobs:
     if: github.event_name == 'pull_request_review'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Process PR review
         uses: actions/github-script@v9
